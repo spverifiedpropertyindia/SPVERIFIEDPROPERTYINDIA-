@@ -11,10 +11,10 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDKyu_TDnbqE6yO9kx0pahFnxqL72q38ME", // ✅ CORRECT API KEY
+  apiKey: "AIzaSyDKyu_TDnbqE6yO9kx0pahFnxqL72q38ME", // ✅ सही
   authDomain: "raazsahuteam-d02de.firebaseapp.com",
   projectId: "raazsahuteam-d02de",
-  storageBucket: "raazsahuteam-d02de.firebasestorage.app", // ✅ same as console
+  storageBucket: "raazsahuteam-d02de.firebasestorage.app", // ✅ console वाला
   messagingSenderId: "307824931465",
   appId: "1:307824931465:web:9f6de256e9d8eb7f528c58",
 };
@@ -28,7 +28,7 @@ provider.setCustomParameters({ prompt: "select_account" });
 let _user = null;
 
 function isLoginPage() {
-  return location.pathname.endsWith("/user-login.html") || location.href.includes("user-login.html");
+  return location.href.includes("user-login.html");
 }
 
 function goDashboard() {
@@ -45,11 +45,10 @@ onAuthStateChanged(auth, (u) => {
     const result = await getRedirectResult(auth);
     if (result && result.user) {
       _user = result.user;
-      console.log("✅ Redirect Login Success:", result.user.email);
       if (isLoginPage()) goDashboard();
     }
   } catch (e) {
-    console.log("❌ Redirect result error:", e);
+    console.log("Redirect result error:", e);
   }
 })();
 
@@ -58,10 +57,6 @@ export const VPI = {
 
   currentUser() {
     return _user;
-  },
-
-  isAdmin() {
-    return !!_user && _user.email === "raazsahu1000@gmail.com";
   },
 
   async googleLogin() {
@@ -80,25 +75,5 @@ export const VPI = {
   async logout() {
     await signOut(auth);
     _user = null;
-  },
-
-  requireLogin() {
-    const u = _user;
-    if (!u) {
-      alert("❌ Please login first");
-      location.href = "user-login.html";
-      throw new Error("NOT_LOGGED_IN");
-    }
-    return u;
-  },
-
-  requireAdmin() {
-    const u = this.requireLogin();
-    if (u.email !== "raazsahu1000@gmail.com") {
-      alert("❌ Admin access only");
-      location.href = "index.html";
-      throw new Error("NOT_ADMIN");
-    }
-    return u;
   }
 };
