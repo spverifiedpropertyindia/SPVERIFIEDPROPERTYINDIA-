@@ -11,10 +11,10 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDKyu_TDnbqE6yQ9kx0pahFn",
+  apiKey: "AIzaSyDKyu_TDnbqE6yO9kx0pahFnxqL72q38ME", // ✅ CORRECT API KEY
   authDomain: "raazsahuteam-d02de.firebaseapp.com",
   projectId: "raazsahuteam-d02de",
-  storageBucket: "raazsahuteam-d02de.appspot.com",
+  storageBucket: "raazsahuteam-d02de.firebasestorage.app", // ✅ same as console
   messagingSenderId: "307824931465",
   appId: "1:307824931465:web:9f6de256e9d8eb7f528c58",
 };
@@ -27,39 +27,26 @@ provider.setCustomParameters({ prompt: "select_account" });
 
 let _user = null;
 
-// ✅ Helper: login page detect
 function isLoginPage() {
   return location.pathname.endsWith("/user-login.html") || location.href.includes("user-login.html");
 }
 
-// ✅ Redirect to dashboard
 function goDashboard() {
   location.href = "index.html";
 }
 
-// ✅ Auth state change
 onAuthStateChanged(auth, (u) => {
   _user = u || null;
-
-  // ✅ Agar user login ho gaya aur login page open hai => dashboard bhej do
-  if (_user && isLoginPage()) {
-    goDashboard();
-  }
+  if (_user && isLoginPage()) goDashboard();
 });
 
-// ✅ Redirect result handle
 (async () => {
   try {
     const result = await getRedirectResult(auth);
-
     if (result && result.user) {
       _user = result.user;
       console.log("✅ Redirect Login Success:", result.user.email);
-
-      // ✅ Redirect result milte hi dashboard bhej do
-      if (isLoginPage()) {
-        goDashboard();
-      }
+      if (isLoginPage()) goDashboard();
     }
   } catch (e) {
     console.log("❌ Redirect result error:", e);
@@ -78,22 +65,14 @@ export const VPI = {
   },
 
   async googleLogin() {
-    try {
-      await setPersistence(auth, browserLocalPersistence);
-    } catch (e) {
-      console.log("❌ Persistence error:", e);
-    }
+    await setPersistence(auth, browserLocalPersistence);
 
-    // ✅ already login
     if (auth.currentUser) {
       _user = auth.currentUser;
-
-      // ✅ already logged in -> dashboard
       if (isLoginPage()) goDashboard();
       return auth.currentUser;
     }
 
-    // ✅ Mobile safe redirect login
     await signInWithRedirect(auth, provider);
     return null;
   },
