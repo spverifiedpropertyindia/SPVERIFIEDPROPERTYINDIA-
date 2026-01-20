@@ -24,7 +24,6 @@
 
 <script type="module">
   import { VPI } from "./vpi.js";
-
   const status = document.getElementById("status");
   const btn = document.getElementById("btn");
 
@@ -40,8 +39,7 @@
 
   btn.onclick = async ()=>{
     status.innerHTML="⏳ Redirecting to Google Login...";
-    await VPI.googleLogin(); 
-    // ✅ redirect will reload page automatically
+    await VPI.googleLogin();
   };
 
   setTimeout(refresh, 1200);

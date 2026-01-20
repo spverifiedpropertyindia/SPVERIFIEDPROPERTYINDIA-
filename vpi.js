@@ -2,6 +2,7 @@ import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12
 import {
   getAuth,
   GoogleAuthProvider,
+  signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
   onAuthStateChanged,
@@ -25,20 +26,15 @@ const provider = new GoogleAuthProvider();
 
 let _user = null;
 
-// ✅ Always update user state
 onAuthStateChanged(auth, (u) => {
   _user = u || null;
 });
 
-// ✅ Handle redirect result (very important for Mobile + GitHub Pages)
 (async () => {
   try {
-    const res = await getRedirectResult(auth);
-    if (res && res.user) {
-      _user = res.user;
-    }
+    await getRedirectResult(auth);
   } catch (e) {
-    console.log("Redirect login error:", e);
+    console.log("Redirect result error:", e);
   }
 })();
 
@@ -53,18 +49,19 @@ export const VPI = {
     return !!_user && _user.email === "raazsahu1000@gmail.com";
   },
 
-  // ✅ Mobile / GitHub Pages Safe Login
   async googleLogin() {
     await setPersistence(auth, browserLocalPersistence);
 
+    // ✅ अगर पहले से login है
     if (auth.currentUser) {
       _user = auth.currentUser;
       return auth.currentUser;
     }
 
-    // ✅ Always Redirect (Popup problem fixed ✅)
+    // ✅ Brave / Mobile browsers में POPUP block होता है
+    // इसलिए हम direct Redirect use करेंगे ✅
     await signInWithRedirect(auth, provider);
-    return null; // redirect will reload the page
+    return null;
   },
 
   async logout() {
