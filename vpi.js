@@ -23,17 +23,31 @@ const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
 const provider = new GoogleAuthProvider();
-provider.setCustomParameters({
-  prompt: "select_account"
-});
+provider.setCustomParameters({ prompt: "select_account" });
 
 let _user = null;
 
+// ✅ Helper: login page detect
+function isLoginPage() {
+  return location.pathname.endsWith("/user-login.html") || location.href.includes("user-login.html");
+}
+
+// ✅ Redirect to dashboard
+function goDashboard() {
+  location.href = "index.html";
+}
+
+// ✅ Auth state change
 onAuthStateChanged(auth, (u) => {
   _user = u || null;
+
+  // ✅ Agar user login ho gaya aur login page open hai => dashboard bhej do
+  if (_user && isLoginPage()) {
+    goDashboard();
+  }
 });
 
-// ✅ Redirect result pick + error visible
+// ✅ Redirect result handle
 (async () => {
   try {
     const result = await getRedirectResult(auth);
@@ -41,6 +55,11 @@ onAuthStateChanged(auth, (u) => {
     if (result && result.user) {
       _user = result.user;
       console.log("✅ Redirect Login Success:", result.user.email);
+
+      // ✅ Redirect result milte hi dashboard bhej do
+      if (isLoginPage()) {
+        goDashboard();
+      }
     }
   } catch (e) {
     console.log("❌ Redirect result error:", e);
@@ -59,14 +78,22 @@ export const VPI = {
   },
 
   async googleLogin() {
-    await setPersistence(auth, browserLocalPersistence);
+    try {
+      await setPersistence(auth, browserLocalPersistence);
+    } catch (e) {
+      console.log("❌ Persistence error:", e);
+    }
 
+    // ✅ already login
     if (auth.currentUser) {
       _user = auth.currentUser;
+
+      // ✅ already logged in -> dashboard
+      if (isLoginPage()) goDashboard();
       return auth.currentUser;
     }
 
-    // ✅ Always redirect (Mobile safe)
+    // ✅ Mobile safe redirect login
     await signInWithRedirect(auth, provider);
     return null;
   },
