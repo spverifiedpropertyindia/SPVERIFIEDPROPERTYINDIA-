@@ -1,3 +1,4 @@
+console.log("✅ VPI UPDATED v=100");
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {
   getAuth,
