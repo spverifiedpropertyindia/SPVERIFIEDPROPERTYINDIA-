@@ -24,22 +24,24 @@
 
 <script type="module">
   import { VPI } from "./vpi.js";
+
   const status = document.getElementById("status");
   const btn = document.getElementById("btn");
-  const wait = (ms)=>new Promise(r=>setTimeout(r,ms));
 
-  async function refresh(){
+  function refresh(){
     const u = VPI.currentUser();
-    if(!u){ status.innerHTML="❌ Not logged in"; return; }
+    if(!u){
+      status.innerHTML="❌ Not logged in";
+      return;
+    }
     status.innerHTML = `✅ Logged in: <b>${u.email}</b><br/>Redirecting...`;
     setTimeout(()=>location.href="index.html", 700);
   }
 
   btn.onclick = async ()=>{
-    status.innerHTML="⏳ Opening Google...";
-    await VPI.googleLogin();
-    await wait(1200);
-    await refresh();
+    status.innerHTML="⏳ Redirecting to Google Login...";
+    await VPI.googleLogin(); 
+    // ✅ redirect will reload page automatically
   };
 
   setTimeout(refresh, 1200);

@@ -2,7 +2,6 @@ import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12
 import {
   getAuth,
   GoogleAuthProvider,
-  signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
   onAuthStateChanged,
@@ -26,12 +25,21 @@ const provider = new GoogleAuthProvider();
 
 let _user = null;
 
+// ✅ Always update user state
 onAuthStateChanged(auth, (u) => {
   _user = u || null;
 });
 
+// ✅ Handle redirect result (very important for Mobile + GitHub Pages)
 (async () => {
-  try { await getRedirectResult(auth); } catch (e) {}
+  try {
+    const res = await getRedirectResult(auth);
+    if (res && res.user) {
+      _user = res.user;
+    }
+  } catch (e) {
+    console.log("Redirect login error:", e);
+  }
 })();
 
 export const VPI = {
@@ -45,6 +53,7 @@ export const VPI = {
     return !!_user && _user.email === "raazsahu1000@gmail.com";
   },
 
+  // ✅ Mobile / GitHub Pages Safe Login
   async googleLogin() {
     await setPersistence(auth, browserLocalPersistence);
 
@@ -53,14 +62,9 @@ export const VPI = {
       return auth.currentUser;
     }
 
-    try {
-      const result = await signInWithPopup(auth, provider);
-      _user = result.user;
-      return result.user;
-    } catch (popupErr) {
-      await signInWithRedirect(auth, provider);
-      return null; // redirect will reload page
-    }
+    // ✅ Always Redirect (Popup problem fixed ✅)
+    await signInWithRedirect(auth, provider);
+    return null; // redirect will reload the page
   },
 
   async logout() {
