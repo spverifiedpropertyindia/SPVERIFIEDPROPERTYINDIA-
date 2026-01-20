@@ -21,30 +21,29 @@ const firebaseConfig = {
 
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 const auth = getAuth(app);
+
 const provider = new GoogleAuthProvider();
+provider.setCustomParameters({
+  prompt: "select_account"
+});
 
 let _user = null;
 
-// ✅ keep user updated
 onAuthStateChanged(auth, (u) => {
   _user = u || null;
 });
 
-// ✅ Redirect result handle (MOST IMPORTANT FIX)
+// ✅ Redirect result pick + error visible
 (async () => {
   try {
     const result = await getRedirectResult(auth);
 
     if (result && result.user) {
       _user = result.user;
-
-      // ✅ login page se auto dashboard bhej do
-      if (location.href.includes("user-login.html")) {
-        location.href = "index.html";
-      }
+      console.log("✅ Redirect Login Success:", result.user.email);
     }
   } catch (e) {
-    console.log("Redirect result error:", e);
+    console.log("❌ Redirect result error:", e);
   }
 })();
 
@@ -60,19 +59,14 @@ export const VPI = {
   },
 
   async googleLogin() {
-    try {
-      await setPersistence(auth, browserLocalPersistence);
-    } catch (e) {
-      console.log("Persistence error:", e);
-    }
+    await setPersistence(auth, browserLocalPersistence);
 
-    // ✅ already logged in
     if (auth.currentUser) {
       _user = auth.currentUser;
       return auth.currentUser;
     }
 
-    // ✅ Mobile browsers me redirect best
+    // ✅ Always redirect (Mobile safe)
     await signInWithRedirect(auth, provider);
     return null;
   },
