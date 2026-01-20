@@ -1,0 +1,187 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Public Listings - SP Verified Property</title>
+
+  <style>
+    body{margin:0;font-family:Arial;background:#f6f7fb}
+    header{background:#0b1b3a;color:#fff;padding:16px}
+    .wrap{max-width:1100px;margin:auto;padding:16px}
+    .card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 10px 24px rgba(0,0,0,.08);margin-top:12px}
+    a{color:#0b1b3a;text-decoration:none;font-weight:900}
+    .mini{font-size:12px;color:#666;line-height:1.4}
+    .title{font-size:18px;font-weight:900;margin:0}
+    input,select{width:100%;padding:12px;border:1px solid #ddd;border-radius:12px;margin-top:8px}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+    @media(max-width:950px){.grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:650px){.grid{grid-template-columns:1fr}}
+    .pCard{border:1px solid #eee;border-radius:16px;overflow:hidden;background:#fff}
+    .pImg{width:100%;height:190px;object-fit:cover;background:#f2f2f2}
+    .pBody{padding:12px}
+    .pTitle{font-size:14px;font-weight:900;margin:0 0 6px 0}
+    .pMeta{font-size:12px;color:#666;margin:0 0 10px 0}
+    .btnRow{display:flex;gap:8px;margin-top:10px}
+    .btn{flex:1;display:inline-block;text-align:center;padding:10px;border-radius:12px;font-weight:900;text-decoration:none}
+    .btnBlue{background:#0b1b3a;color:#fff}
+    .btnOrange{background:#ff7a00;color:#fff}
+    .pill{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:900;background:#d4edda;color:#0f7a35;margin-bottom:8px}
+  </style>
+</head>
+
+<body>
+<header><b>Public Listings ✅</b></header>
+
+<div class="wrap">
+  <div class="card">
+    <p><a href="index.html">← Home</a></p>
+    <p class="title">Verified Properties</p>
+    <p class="mini">✅ Only Admin APPROVED properties दिखेंगी</p>
+
+    <input id="searchBox" placeholder="Search by title / address / type..." />
+
+    <select id="sortBox">
+      <option value="latest">Sort: Latest</option>
+      <option value="price_low">Sort: Price Low → High</option>
+      <option value="price_high">Sort: Price High → Low</option>
+    </select>
+
+    <div class="mini" id="statusBox" style="margin-top:10px;">Loading...</div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+</div>
+
+<script type="module">
+  import {
+    getFirestore,
+    collection,
+    query,
+    where,
+    getDocs
+  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+  import { getApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+
+  const db = getFirestore(getApp());
+
+  const grid = document.getElementById("grid");
+  const statusBox = document.getElementById("statusBox");
+  const searchBox = document.getElementById("searchBox");
+  const sortBox = document.getElementById("sortBox");
+
+  let allProps = [];
+
+  function safe(v){ return (v === undefined || v === null) ? "" : String(v); }
+
+  function formatPrice(p){
+    const n = Number(p || 0);
+    if(!n) return "Price not set";
+    return "₹" + n.toLocaleString("en-IN");
+  }
+
+  function buildCard(p){
+    const title = safe(p.title) || "No title";
+    const address = safe(p.address);
+    const type = safe(p.type);
+    const price = formatPrice(p.price);
+    const map = safe(p.gpsMapLink);
+
+    const photos = Array.isArray(p.photos) ? p.photos : [];
+    const img = photos.length ? photos[0] : "";
+
+    const detailsLink = `property.html?id=${p.id}`;
+
+    const div = document.createElement("div");
+    div.className = "pCard";
+
+    div.innerHTML = `
+      ${img ? `<img class="pImg" src="${img}" alt="photo">` : `<div class="pImg"></div>`}
+      <div class="pBody">
+        <div class="pill">VERIFIED ✅</div>
+
+        <p class="pTitle">${title}</p>
+        <p class="pMeta">${type ? type + " • " : ""}${price}</p>
+        <p class="pMeta">${address}</p>
+
+        <div class="btnRow">
+          <a class="btn btnBlue" href="${detailsLink}">View Details ✅</a>
+          ${map
+            ? `<a class="btn btnOrange" href="${map}" target="_blank">Map 📍</a>`
+            : `<span class="btn btnOrange" style="opacity:.5">No Map</span>`
+          }
+        </div>
+      </div>
+    `;
+    return div;
+  }
+
+  function applyFilterAndRender(){
+    const q = (searchBox.value || "").trim().toLowerCase();
+
+    let filtered = allProps.filter(p=>{
+      const t = safe(p.title).toLowerCase();
+      const a = safe(p.address).toLowerCase();
+      const ty = safe(p.type).toLowerCase();
+      return (t.includes(q) || a.includes(q) || ty.includes(q));
+    });
+
+    const sort = sortBox.value;
+
+    if(sort === "price_low"){
+      filtered.sort((a,b)=>Number(a.price||0)-Number(b.price||0));
+    } else if(sort === "price_high"){
+      filtered.sort((a,b)=>Number(b.price||0)-Number(a.price||0));
+    } else {
+      // Latest (simple)
+      filtered.reverse();
+    }
+
+    grid.innerHTML = "";
+
+    if(filtered.length === 0){
+      statusBox.innerHTML = "❌ No property found.";
+      return;
+    }
+
+    statusBox.innerHTML = `✅ Showing <b>${filtered.length}</b> properties`;
+
+    filtered.forEach(p=>{
+      grid.appendChild(buildCard(p));
+    });
+  }
+
+  async function loadApprovedProperties(){
+    try{
+      statusBox.innerHTML = "⏳ Loading approved properties...";
+      grid.innerHTML = "";
+
+      const q = query(collection(db, "properties"), where("status", "==", "APPROVED"));
+      const snap = await getDocs(q);
+
+      allProps = [];
+      snap.forEach((d)=>{
+        allProps.push({ id: d.id, ...d.data() });
+      });
+
+      if(allProps.length === 0){
+        statusBox.innerHTML = "❌ No verified properties available अभी.";
+        return;
+      }
+
+      applyFilterAndRender();
+    }catch(err){
+      console.log(err);
+      statusBox.innerHTML = "❌ Failed to load listings (Firestore error)";
+    }
+  }
+
+  searchBox.addEventListener("input", applyFilterAndRender);
+  sortBox.addEventListener("change", applyFilterAndRender);
+
+  loadApprovedProperties();
+</script>
+
+</body>
+</html>

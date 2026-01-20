@@ -1,0 +1,225 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>SP Verified Property - Dashboard</title>
+  <style>
+    body{margin:0;font-family:Arial;background:#f6f7fb}
+    header{background:#0b1b3a;color:#fff;padding:16px}
+    .wrap{max-width:900px;margin:auto;padding:16px}
+    .card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 10px 24px rgba(0,0,0,.08);margin-top:12px}
+    a.btn{display:block;padding:12px;border-radius:12px;background:#0b1b3a;color:#fff;text-decoration:none;font-weight:900;margin-top:10px;text-align:center}
+    .mini{font-size:12px;color:#666}
+    .title{font-size:16px;font-weight:900;color:#0b1b3a;margin:0 0 6px}
+    .box{background:#f1f3ff;border:1px solid #dfe3ff;padding:12px;border-radius:14px;margin-top:10px}
+    ul{margin:8px 0 0 18px;padding:0}
+    li{margin:6px 0}
+    .supportBox{background:#fff7ed;border:1px solid #ffd8a8;padding:12px;border-radius:14px;margin-top:12px}
+    .supportBtn{
+      display:block;
+      padding:12px;
+      border-radius:12px;
+      background:#ff7a00;
+      color:#fff;
+      text-decoration:none;
+      font-weight:900;
+      margin-top:10px;
+      text-align:center;
+    }
+    .supportBtn2{
+      display:block;
+      padding:12px;
+      border-radius:12px;
+      background:#25D366;
+      color:#fff;
+      text-decoration:none;
+      font-weight:900;
+      margin-top:10px;
+      text-align:center;
+    }
+    .supportBtn3{
+      display:block;
+      padding:12px;
+      border-radius:12px;
+      background:#0b1b3a;
+      color:#fff;
+      text-decoration:none;
+      font-weight:900;
+      margin-top:10px;
+      text-align:center;
+    }
+  </style>
+</head>
+<body>
+<header><b>Dashboard ✅</b></header>
+
+<div class="wrap">
+
+  <!-- ✅ MAIN DASHBOARD CARD -->
+  <div class="card">
+    <div class="mini" id="status">Loading...</div>
+
+    <!-- ✅ Plan Reminder -->
+    <div class="mini" id="planReminder" style="margin-top:8px;font-weight:900;"></div>
+
+    <a class="btn" href="user-setup.html">User Setup</a>
+    <a class="btn" href="kyc.html">KYC Submit</a>
+    <a class="btn" href="plans.html">Plans</a>
+    <a class="btn" href="payment.html">Upload Payment Proof</a>
+    <a class="btn" href="add-property.html">Add Property</a>
+    <a class="btn" href="listings.html">Public Listings</a>
+    <a class="btn" href="admin.html">Admin Panel</a>
+
+    <!-- ✅ Support / Contact -->
+    <a class="btn" href="contact.html">Support / Contact</a>
+
+    <a class="btn" href="#" id="logoutBtn" style="background:#ff3b3b">Logout</a>
+  </div>
+
+  <!-- ✅ INTRODUCTION + PROCESS CARD -->
+  <div class="card">
+    <p class="title">✅ SP VERIFIED PROPERTY INDIA - Introduction</p>
+    <div class="mini">
+      SP VERIFIED PROPERTY INDIA ek <b>Property Listing + Verification Platform</b> hai jisme Owner / Seller / Broker
+      apni property list kar sakte hai aur Buyer safely verified property dekh sakta hai.
+    </div>
+
+    <div class="box">
+      <p class="title">✅ Website Kaise Kaam Karta Hai? (Full Process)</p>
+      <ul class="mini">
+        <li><b>Step 1:</b> Google Login ✅</li>
+        <li><b>Step 2:</b> User Setup fill करना compulsory ✅ (Name + Mobile + Role)</li>
+        <li><b>Step 3:</b> KYC Submit compulsory ✅ (Live Photo + Document Front/Back)</li>
+        <li><b>Step 4:</b> Plan Select करना ✅ (Listing activate करने के लिए)</li>
+        <li><b>Step 5:</b> Payment Proof Upload ✅ (Admin approval के बाद plan ACTIVE होगा)</li>
+        <li><b>Step 6:</b> Add Property ✅ (Minimum 3 photos + GPS camera photo compulsory)</li>
+        <li><b>Step 7:</b> Admin Approval ✅ (Approved listing ही Public me show होगी)</li>
+      </ul>
+    </div>
+
+    <div class="box">
+      <p class="title">✅ KYC Ke Liye Kaunse Document Lagte Hai?</p>
+      <ul class="mini">
+        <li>Aadhaar Card (Front + Back)</li>
+        <li>PAN Card</li>
+        <li>Voter ID (Front + Back)</li>
+        <li><b>Live Photo</b> camera se compulsory ✅</li>
+      </ul>
+    </div>
+
+    <div class="box">
+      <p class="title">✅ Kya Kya Compulsory Hai?</p>
+      <ul class="mini">
+        <li>Google Login compulsory ✅</li>
+        <li>User Setup compulsory ✅</li>
+        <li>KYC Submit compulsory ✅</li>
+        <li>Plan select + Payment proof (Listing ke liye) ✅</li>
+        <li>Property add me minimum 3 photos ✅</li>
+        <li>GPS camera photo compulsory ✅</li>
+        <li>Admin approval compulsory ✅</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ✅ SUPPORT CARD -->
+  <div class="card">
+    <p class="title">✅ Support / Contact</p>
+    <div class="supportBox">
+      <div class="mini">
+        📞 Mobile: <b>8305070599</b><br/>
+        📧 Email: <b>spverifiedproperty@gmail.com</b><br/>
+        🕙 Working Time: <b>10 AM - 4 PM</b>
+      </div>
+
+      <a class="supportBtn2" href="https://wa.me/918305070599" target="_blank">WhatsApp Support ✅</a>
+      <a class="supportBtn" href="tel:8305070599">Call Now ✅</a>
+      <a class="supportBtn3" href="mailto:spverifiedproperty@gmail.com">Email Support ✅</a>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+  import { VPI } from "./vpi.js";
+
+  import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+  import { getApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+
+  const db = getFirestore(getApp());
+
+  const status = document.getElementById("status");
+  const planReminder = document.getElementById("planReminder");
+  const logoutBtn = document.getElementById("logoutBtn");
+
+  function refresh(){
+    const u = VPI.currentUser();
+
+    if(!u){
+      status.innerHTML = `❌ Not logged in. <a href="user-login.html">Login</a>`;
+      planReminder.innerHTML = "";
+      return;
+    }
+
+    status.innerHTML = `✅ Logged in: <b>${u.email}</b> ${VPI.isAdmin() ? "(ADMIN ✅)" : ""}`;
+
+    // ✅ Plan Reminder Check (Firestore)
+    (async ()=>{
+      try{
+        planReminder.innerHTML = "";
+
+        const snap = await getDoc(doc(db, "users", u.uid));
+        if(!snap.exists()) return;
+
+        const data = snap.data();
+
+        const planStatus = data.planStatus || "";
+        const planSelected = data.planSelected || "";
+        const expiresAtObj = data.planExpiresAt;
+
+        if(!planSelected){
+          planReminder.innerHTML = "ℹ️ Plan: Not Selected";
+          return;
+        }
+
+        if(planStatus !== "ACTIVE"){
+          planReminder.innerHTML = `⏳ Plan: <b>${planSelected}</b> (Activation Pending)`;
+          return;
+        }
+
+        if(!expiresAtObj){
+          planReminder.innerHTML = `✅ Plan Active: <b>${planSelected}</b>`;
+          return;
+        }
+
+        // Firestore Timestamp -> Date
+        const expiresAt = expiresAtObj.toDate ? expiresAtObj.toDate() : new Date(expiresAtObj);
+        const now = new Date();
+
+        const diffMs = expiresAt.getTime() - now.getTime();
+        const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+        if(daysLeft <= 0){
+          planReminder.innerHTML = `❌ Plan Expired: <b>${planSelected}</b> | Renew Now ✅`;
+        } else if(daysLeft <= 3){
+          planReminder.innerHTML = `⚠️ Plan Expiring Soon: <b>${planSelected}</b> | ${daysLeft} day left ✅`;
+        } else {
+          planReminder.innerHTML = `✅ Plan Active: <b>${planSelected}</b> | ${daysLeft} days left`;
+        }
+
+      }catch(e){
+        console.log(e);
+        planReminder.innerHTML = "";
+      }
+    })();
+  }
+
+  logoutBtn.onclick = async ()=>{
+    await VPI.logout();
+    location.href="user-login.html";
+  };
+
+  setTimeout(refresh, 800);
+</script>
+</body>
+</html>
