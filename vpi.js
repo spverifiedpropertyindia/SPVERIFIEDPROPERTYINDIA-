@@ -25,12 +25,12 @@ const provider = new GoogleAuthProvider();
 
 let _user = null;
 
-// ✅ Auto update current user
+// ✅ keep user updated
 onAuthStateChanged(auth, (u) => {
   _user = u || null;
 });
 
-// ✅ IMPORTANT: Redirect ke baad result ko pick karo aur user set karo
+// ✅ Redirect result handle (MOST IMPORTANT FIX)
 (async () => {
   try {
     const result = await getRedirectResult(auth);
@@ -38,9 +38,8 @@ onAuthStateChanged(auth, (u) => {
     if (result && result.user) {
       _user = result.user;
 
-      // ✅ redirect ke baad auto dashboard pe bhejo
-      // (ye line sabse important hai)
-      if (location.pathname.endsWith("/user-login.html")) {
+      // ✅ login page se auto dashboard bhej do
+      if (location.href.includes("user-login.html")) {
         location.href = "index.html";
       }
     }
@@ -67,16 +66,14 @@ export const VPI = {
       console.log("Persistence error:", e);
     }
 
-    // ✅ अगर पहले से login है तो return
+    // ✅ already logged in
     if (auth.currentUser) {
       _user = auth.currentUser;
       return auth.currentUser;
     }
 
-    // ✅ Mobile me popup block hota hai, redirect best hai
+    // ✅ Mobile browsers me redirect best
     await signInWithRedirect(auth, provider);
-
-    // redirect start hote hi ye page unload ho jayega
     return null;
   },
 
