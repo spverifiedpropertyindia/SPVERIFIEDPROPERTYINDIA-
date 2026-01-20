@@ -2,7 +2,6 @@ import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12
 import {
   getAuth,
   GoogleAuthProvider,
-  signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
   onAuthStateChanged,
@@ -26,13 +25,25 @@ const provider = new GoogleAuthProvider();
 
 let _user = null;
 
+// ✅ Auto update current user
 onAuthStateChanged(auth, (u) => {
   _user = u || null;
 });
 
+// ✅ IMPORTANT: Redirect ke baad result ko pick karo aur user set karo
 (async () => {
   try {
-    await getRedirectResult(auth);
+    const result = await getRedirectResult(auth);
+
+    if (result && result.user) {
+      _user = result.user;
+
+      // ✅ redirect ke baad auto dashboard pe bhejo
+      // (ye line sabse important hai)
+      if (location.pathname.endsWith("/user-login.html")) {
+        location.href = "index.html";
+      }
+    }
   } catch (e) {
     console.log("Redirect result error:", e);
   }
@@ -50,17 +61,22 @@ export const VPI = {
   },
 
   async googleLogin() {
-    await setPersistence(auth, browserLocalPersistence);
+    try {
+      await setPersistence(auth, browserLocalPersistence);
+    } catch (e) {
+      console.log("Persistence error:", e);
+    }
 
-    // ✅ अगर पहले से login है
+    // ✅ अगर पहले से login है तो return
     if (auth.currentUser) {
       _user = auth.currentUser;
       return auth.currentUser;
     }
 
-    // ✅ Brave / Mobile browsers में POPUP block होता है
-    // इसलिए हम direct Redirect use करेंगे ✅
+    // ✅ Mobile me popup block hota hai, redirect best hai
     await signInWithRedirect(auth, provider);
+
+    // redirect start hote hi ye page unload ho jayega
     return null;
   },
 
