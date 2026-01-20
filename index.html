@@ -3,6 +3,14 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
+
+  <!-- ✅ FORCE CORRECT DOMAIN (जरूरी) -->
+  <script>
+    if (location.hostname === "pverifiedpropertyindia.github.io") {
+      location.replace("https://spverifiedpropertyindia.github.io/SPVERIFIEDPROPERTYINDIA-/");
+    }
+  </script>
+
   <title>SP Verified Property - Dashboard</title>
   <style>
     body{margin:0;font-family:Arial;background:#f6f7fb}
@@ -56,11 +64,8 @@
 
 <div class="wrap">
 
-  <!-- ✅ MAIN DASHBOARD CARD -->
   <div class="card">
     <div class="mini" id="status">Loading...</div>
-
-    <!-- ✅ Plan Reminder -->
     <div class="mini" id="planReminder" style="margin-top:8px;font-weight:900;"></div>
 
     <a class="btn" href="user-setup.html">User Setup</a>
@@ -70,14 +75,11 @@
     <a class="btn" href="add-property.html">Add Property</a>
     <a class="btn" href="listings.html">Public Listings</a>
     <a class="btn" href="admin.html">Admin Panel</a>
-
-    <!-- ✅ Support / Contact -->
     <a class="btn" href="contact.html">Support / Contact</a>
 
     <a class="btn" href="#" id="logoutBtn" style="background:#ff3b3b">Logout</a>
   </div>
 
-  <!-- ✅ INTRODUCTION + PROCESS CARD -->
   <div class="card">
     <p class="title">✅ SP VERIFIED PROPERTY INDIA - Introduction</p>
     <div class="mini">
@@ -91,10 +93,10 @@
         <li><b>Step 1:</b> Google Login ✅</li>
         <li><b>Step 2:</b> User Setup fill करना compulsory ✅ (Name + Mobile + Role)</li>
         <li><b>Step 3:</b> KYC Submit compulsory ✅ (Live Photo + Document Front/Back)</li>
-        <li><b>Step 4:</b> Plan Select करना ✅ (Listing activate करने के लिए)</li>
-        <li><b>Step 5:</b> Payment Proof Upload ✅ (Admin approval के बाद plan ACTIVE होगा)</li>
-        <li><b>Step 6:</b> Add Property ✅ (Minimum 3 photos + GPS camera photo compulsory)</li>
-        <li><b>Step 7:</b> Admin Approval ✅ (Approved listing ही Public me show होगी)</li>
+        <li><b>Step 4:</b> Plan Select करना ✅</li>
+        <li><b>Step 5:</b> Payment Proof Upload ✅</li>
+        <li><b>Step 6:</b> Add Property ✅</li>
+        <li><b>Step 7:</b> Admin Approval ✅</li>
       </ul>
     </div>
 
@@ -114,7 +116,7 @@
         <li>Google Login compulsory ✅</li>
         <li>User Setup compulsory ✅</li>
         <li>KYC Submit compulsory ✅</li>
-        <li>Plan select + Payment proof (Listing ke liye) ✅</li>
+        <li>Plan select + Payment proof ✅</li>
         <li>Property add me minimum 3 photos ✅</li>
         <li>GPS camera photo compulsory ✅</li>
         <li>Admin approval compulsory ✅</li>
@@ -122,7 +124,6 @@
     </div>
   </div>
 
-  <!-- ✅ SUPPORT CARD -->
   <div class="card">
     <p class="title">✅ Support / Contact</p>
     <div class="supportBox">
@@ -152,7 +153,7 @@
   const planReminder = document.getElementById("planReminder");
   const logoutBtn = document.getElementById("logoutBtn");
 
-  function refresh(){
+  async function refresh(){
     const u = VPI.currentUser();
 
     if(!u){
@@ -163,55 +164,50 @@
 
     status.innerHTML = `✅ Logged in: <b>${u.email}</b> ${VPI.isAdmin() ? "(ADMIN ✅)" : ""}`;
 
-    // ✅ Plan Reminder Check (Firestore)
-    (async ()=>{
-      try{
-        planReminder.innerHTML = "";
+    try{
+      planReminder.innerHTML = "";
 
-        const snap = await getDoc(doc(db, "users", u.uid));
-        if(!snap.exists()) return;
+      const snap = await getDoc(doc(db, "users", u.uid));
+      if(!snap.exists()) return;
 
-        const data = snap.data();
+      const data = snap.data();
+      const planStatus = data.planStatus || "";
+      const planSelected = data.planSelected || "";
+      const expiresAtObj = data.planExpiresAt;
 
-        const planStatus = data.planStatus || "";
-        const planSelected = data.planSelected || "";
-        const expiresAtObj = data.planExpiresAt;
-
-        if(!planSelected){
-          planReminder.innerHTML = "ℹ️ Plan: Not Selected";
-          return;
-        }
-
-        if(planStatus !== "ACTIVE"){
-          planReminder.innerHTML = `⏳ Plan: <b>${planSelected}</b> (Activation Pending)`;
-          return;
-        }
-
-        if(!expiresAtObj){
-          planReminder.innerHTML = `✅ Plan Active: <b>${planSelected}</b>`;
-          return;
-        }
-
-        // Firestore Timestamp -> Date
-        const expiresAt = expiresAtObj.toDate ? expiresAtObj.toDate() : new Date(expiresAtObj);
-        const now = new Date();
-
-        const diffMs = expiresAt.getTime() - now.getTime();
-        const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
-        if(daysLeft <= 0){
-          planReminder.innerHTML = `❌ Plan Expired: <b>${planSelected}</b> | Renew Now ✅`;
-        } else if(daysLeft <= 3){
-          planReminder.innerHTML = `⚠️ Plan Expiring Soon: <b>${planSelected}</b> | ${daysLeft} day left ✅`;
-        } else {
-          planReminder.innerHTML = `✅ Plan Active: <b>${planSelected}</b> | ${daysLeft} days left`;
-        }
-
-      }catch(e){
-        console.log(e);
-        planReminder.innerHTML = "";
+      if(!planSelected){
+        planReminder.innerHTML = "ℹ️ Plan: Not Selected";
+        return;
       }
-    })();
+
+      if(planStatus !== "ACTIVE"){
+        planReminder.innerHTML = `⏳ Plan: <b>${planSelected}</b> (Activation Pending)`;
+        return;
+      }
+
+      if(!expiresAtObj){
+        planReminder.innerHTML = `✅ Plan Active: <b>${planSelected}</b>`;
+        return;
+      }
+
+      const expiresAt = expiresAtObj.toDate ? expiresAtObj.toDate() : new Date(expiresAtObj);
+      const now = new Date();
+
+      const diffMs = expiresAt.getTime() - now.getTime();
+      const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+      if(daysLeft <= 0){
+        planReminder.innerHTML = `❌ Plan Expired: <b>${planSelected}</b> | Renew Now ✅`;
+      } else if(daysLeft <= 3){
+        planReminder.innerHTML = `⚠️ Plan Expiring Soon: <b>${planSelected}</b> | ${daysLeft} day left ✅`;
+      } else {
+        planReminder.innerHTML = `✅ Plan Active: <b>${planSelected}</b> | ${daysLeft} days left`;
+      }
+
+    }catch(e){
+      console.log(e);
+      planReminder.innerHTML = "";
+    }
   }
 
   logoutBtn.onclick = async ()=>{
@@ -219,7 +215,8 @@
     location.href="user-login.html";
   };
 
-  setTimeout(refresh, 800);
+  // ✅ refresh continuously
+  setInterval(refresh, 1000);
 </script>
 </body>
 </html>
