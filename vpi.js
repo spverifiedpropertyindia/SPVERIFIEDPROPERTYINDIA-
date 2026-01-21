@@ -15,16 +15,13 @@ import {
   getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-console.log("✅ VPI PRO LOADED (POPUP + ADMIN BYPASS)");
+console.log("✅ VPI PRO LOADED (POPUP + ADMIN BYPASS + AUTH WAIT)");
 
 const firebaseConfig = {
   apiKey: "AIzaSyDKyu_TDnbqE6yO9kx0pahFnxqL72q38ME",
   authDomain: "raazsahuteam-d02de.firebaseapp.com",
   projectId: "raazsahuteam-d02de",
-
-  // ✅ Bucket must be appspot.com
   storageBucket: "raazsahuteam-d02de.appspot.com",
-
   messagingSenderId: "307824931465",
   appId: "1:307824931465:web:9f6de256e9d8eb7f528c58",
   measurementId: "G-BG0SCBN118"
@@ -39,6 +36,10 @@ provider.setCustomParameters({ prompt: "select_account" });
 
 let _user = null;
 
+// ✅ this ensures every page waits until Firebase loads session
+let _authReadyResolve;
+const _authReady = new Promise((resolve) => (_authReadyResolve = resolve));
+
 function isLoginPage() {
   return location.href.includes("user-login.html");
 }
@@ -47,10 +48,11 @@ function goDashboard() {
   location.href = "index.html";
 }
 
+// ✅ wait first time auth
 onAuthStateChanged(auth, (u) => {
   _user = u || null;
+  _authReadyResolve(true);
 
-  // ✅ If already logged in and user is on login page, redirect to dashboard
   if (_user && isLoginPage()) {
     goDashboard();
   }
@@ -73,6 +75,11 @@ export const VPI = {
   auth,
   db,
 
+  async waitForAuth() {
+    await _authReady;
+    return _user;
+  },
+
   currentUser() {
     return _user;
   },
@@ -81,18 +88,16 @@ export const VPI = {
     return !!_user && _user.email === "raazsahu1000@gmail.com";
   },
 
-  // ✅ FIXED: POPUP LOGIN (works best on GitHub Pages + mobile)
+  // ✅ popup login
   async googleLogin() {
     await setPersistence(auth, browserLocalPersistence);
 
-    // already logged
     if (auth.currentUser) {
       _user = auth.currentUser;
       if (isLoginPage()) goDashboard();
       return auth.currentUser;
     }
 
-    // popup login
     const res = await signInWithPopup(auth, provider);
     _user = res.user;
 
@@ -107,7 +112,10 @@ export const VPI = {
     _user = null;
   },
 
-  requireLogin() {
+  // ✅ FIXED (async wait)
+  async requireLogin() {
+    await this.waitForAuth();
+
     const u = _user;
     if (!u) {
       alert("❌ Please login first");
@@ -117,8 +125,8 @@ export const VPI = {
     return u;
   },
 
-  requireAdmin() {
-    const u = this.requireLogin();
+  async requireAdmin() {
+    const u = await this.requireLogin();
     if (u.email !== "raazsahu1000@gmail.com") {
       alert("❌ Admin access only");
       location.href = "index.html";
@@ -127,11 +135,10 @@ export const VPI = {
     return u;
   },
 
-  // ✅ PRO: KYC Approved required (ADMIN BYPASS ✅)
+  // ✅ KYC check (ADMIN BYPASS ✅)
   async requireKycApproved() {
-    this.requireLogin();
+    await this.requireLogin();
 
-    // ✅ ADMIN FULL ACCESS
     if (this.isAdmin()) return true;
 
     const profile = await getUserDoc();
@@ -143,11 +150,10 @@ export const VPI = {
     return true;
   },
 
-  // ✅ PRO: Plan Active + Not Expired required (ADMIN BYPASS ✅)
+  // ✅ Plan check (ADMIN BYPASS ✅)
   async requireActivePlan() {
-    this.requireLogin();
+    await this.requireLogin();
 
-    // ✅ ADMIN FULL ACCESS
     if (this.isAdmin()) return true;
 
     const profile = await getUserDoc();

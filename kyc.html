@@ -131,7 +131,7 @@
 </div>
 
 <script type="module">
-  import { VPI } from "./vpi.js?v=2";
+  import { VPI } from "./vpi.js?v=3";
 
   import {
     getFirestore, doc, setDoc, serverTimestamp
@@ -147,7 +147,6 @@
   const db = getFirestore(app);
   const storage = getStorage(app);
 
-  // ✅ elements
   const aadhaarEl = document.getElementById("aadhaar");
   const panEl = document.getElementById("pan");
   const voterEl = document.getElementById("voter");
@@ -173,10 +172,13 @@
   const preview = document.getElementById("preview");
   const camMsg = document.getElementById("camMsg");
 
-  // ✅ login required
-  const u = VPI.requireLogin();
+  // ✅ FIX: wait login
+  let u = null;
+  async function init(){
+    u = await VPI.requireLogin();
+  }
+  init();
 
-  // ✅ validations
   function validAadhaar(a){ return /^[0-9]{12}$/.test((a||"").trim()); }
   function validPAN(p){ return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test((p||"").trim().toUpperCase()); }
 
@@ -193,7 +195,6 @@
     return await getDownloadURL(r);
   }
 
-  // ✅ Camera
   let camStream = null;
   let livePhotoBlob = null;
 
@@ -254,6 +255,8 @@
 
   submitBtn.onclick = async ()=>{
     try{
+      if(!u) u = await VPI.requireLogin();
+
       const aadhaar = aadhaarEl.value.trim();
       const pan = panEl.value.trim().toUpperCase();
       const voter = voterEl.value.trim();
@@ -263,7 +266,6 @@
       if(!validPAN(pan)) return alert("❌ PAN invalid (ABCDE1234F)");
       if(!voter) return alert("❌ Voter ID required");
 
-      // files
       const f1 = aadhaarFrontEl.files[0];
       const f2 = aadhaarBackEl.files[0];
       const f3 = panFileEl.files[0];
@@ -308,7 +310,6 @@
         pan,
         voter,
         note,
-
         status: "PENDING",
         createdAt: serverTimestamp(),
 
