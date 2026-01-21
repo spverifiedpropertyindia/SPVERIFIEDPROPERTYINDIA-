@@ -80,7 +80,9 @@
     <a class="btn orange" href="plans.html">Plans</a>
     <a class="btn orange" href="payment.html">Upload Payment Proof (PRO)</a>
 
+    <!-- ✅ Add Property (Admin ke liye Always ON) -->
     <a class="btn green" href="add-property.html" id="addPropBtn">Add Property (PRO)</a>
+
     <a class="btn" href="listings.html">Public Listings</a>
 
     <a class="btn" href="admin.html" id="adminBtn" style="display:none;">Admin Panel ✅</a>
@@ -172,7 +174,7 @@
       localStorage.setItem(k, "1");
       return true;
     }catch(e){
-      return true; // अगर localstorage blocked हो तो भी reminder चले
+      return true;
     }
   }
 
@@ -190,9 +192,10 @@
       return;
     }
 
-    status.innerHTML = `✅ Logged in: <b>${u.email}</b> ${VPI.isAdmin() ? "(ADMIN ✅)" : ""}`;
+    const isAdmin = VPI.isAdmin();
 
-    adminBtn.style.display = VPI.isAdmin() ? "block" : "none";
+    status.innerHTML = `✅ Logged in: <b>${u.email}</b> ${isAdmin ? "(ADMIN ✅)" : ""}`;
+    adminBtn.style.display = isAdmin ? "block" : "none";
 
     try{
       const snap = await getDoc(doc(db,"users", u.uid));
@@ -200,13 +203,20 @@
         kycLine.innerHTML = `KYC: ${badge("PENDING")}`;
         planLine.innerHTML = `Plan: ${badge("PENDING")}`;
         expLine.innerHTML = `Expiry: -`;
-        lockMsg.innerHTML = "⚠️ Please complete User Setup first ✅";
 
         reminderBox.style.display = "none";
         renewBtn.style.display = "none";
 
-        addPropBtn.style.pointerEvents = "none";
-        addPropBtn.style.opacity = "0.5";
+        // ✅ Admin always unlock even if user doc missing
+        if(isAdmin){
+          lockMsg.innerHTML = "✅ ADMIN FULL ACCESS ENABLED ✅";
+          addPropBtn.style.pointerEvents = "auto";
+          addPropBtn.style.opacity = "1";
+        }else{
+          lockMsg.innerHTML = "⚠️ Please complete User Setup first ✅";
+          addPropBtn.style.pointerEvents = "none";
+          addPropBtn.style.opacity = "0.5";
+        }
         return;
       }
 
@@ -236,7 +246,6 @@
 
           showReminderUI("alertRed", `❌ आपका Plan Expire हो चुका है! अभी Renew करें ✅`);
 
-          // ✅ popup reminder (only once per day)
           if(canShowReminder(u.uid)){
             alert("❌ आपका Plan Expire हो चुका है! अभी Renew करो ✅");
           }
@@ -244,7 +253,6 @@
         }else{
           expLine.innerHTML = `Expiry: <b>${daysLeft} days left</b>`;
 
-          // ✅ Warning reminders
           if(daysLeft <= 3){
             renewBtn.style.display = "block";
             showReminderUI("alertYellow", `⚠️ आपका Plan <b>${daysLeft} दिन</b> में expire होने वाला है। अभी Renew कर लो ✅`);
@@ -253,14 +261,12 @@
               alert(`⚠️ आपका Plan ${daysLeft} दिन में expire होगा। अभी Renew कर लो ✅`);
             }
           }else{
-            // ✅ plan ok
             showReminderUI("alertGreen", `✅ आपका Plan Active है। No problem ✅`);
           }
         }
       }else{
         expLine.innerHTML = `Expiry: -`;
 
-        // ✅ अगर expiry नहीं है तो भी suggestion
         if(planStatus === "ACTIVE"){
           showReminderUI("alertYellow", `⚠️ Plan Active है लेकिन Expiry date सेट नहीं है। Admin से expiry update करवाओ ✅`);
         }else{
@@ -268,7 +274,15 @@
         }
       }
 
-      // ✅ LOCK LOGIC FOR ADD PROPERTY
+      // ✅ ADMIN FULL ACCESS ENABLED ✅
+      if(isAdmin){
+        lockMsg.innerHTML = "✅ ADMIN FULL ACCESS ENABLED ✅";
+        addPropBtn.style.pointerEvents = "auto";
+        addPropBtn.style.opacity = "1";
+        return;
+      }
+
+      // ✅ USER LOCK LOGIC (same as before)
       let lockText = "";
 
       if(kycStatus !== "APPROVED"){
@@ -283,7 +297,11 @@
 
       lockMsg.innerHTML = lockText;
 
-      const unlocked = (kycStatus==="APPROVED" && planStatus==="ACTIVE" && (!expiresAt || expiresAt.getTime() > new Date().getTime()));
+      const unlocked = (
+        kycStatus === "APPROVED" &&
+        planStatus === "ACTIVE" &&
+        (!expiresAt || expiresAt.getTime() > new Date().getTime())
+      );
 
       addPropBtn.style.pointerEvents = unlocked ? "auto" : "none";
       addPropBtn.style.opacity = unlocked ? "1" : "0.5";
@@ -299,7 +317,6 @@
     location.href = "user-login.html";
   };
 
-  // ✅ Refresh every 5 seconds (1 second मत करो)
   setInterval(refresh, 5000);
   refresh();
 </script>
