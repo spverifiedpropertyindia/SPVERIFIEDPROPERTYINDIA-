@@ -66,6 +66,11 @@
     <p class="title" style="margin-top:12px;">🏠 Add New Property</p>
     <div class="mini">Min 3 Photos + GPS compulsory ✅</div>
 
+    <!-- ✅ NEW: Owner limit status line -->
+    <div class="warn mini" id="ownerLimitLine" style="margin-top:10px; display:none;">
+      ⏳ Checking plan limit...
+    </div>
+
     <div class="warn mini" style="margin-top:10px;">
       ✅ Submit करने के बाद property <b>PENDING</b> रहेगी.<br/>
       ✅ Admin approval के बाद public listings में show होगी ✅
@@ -145,7 +150,10 @@
     getFirestore,
     collection,
     addDoc,
-    serverTimestamp
+    serverTimestamp,
+    doc,
+    getDoc,
+    setDoc
   } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
   import {
@@ -180,10 +188,90 @@
   const prog = document.getElementById("prog");
   const upMsg = document.getElementById("upMsg");
 
+  const ownerLimitLine = document.getElementById("ownerLimitLine");
+
   // ✅ FIX: Wait for login properly
   let u = null;
+
+  // ✅ Owner Limit values
+  let ownerMonthlyLimit = 0;
+  let ownerMonthlyUsed = 0;
+  let ownerMonthlyResetAt = null;
+  let planSelected = "";
+
+  function toDateSafe(ts){
+    if(!ts) return null;
+    if(ts.toDate) return ts.toDate();
+    return new Date(ts);
+  }
+
+  function firstDayNextMonth(dateObj){
+    const d = new Date(dateObj);
+    return new Date(d.getFullYear(), d.getMonth() + 1, 1);
+  }
+
+  async function loadUserPlanLimit(){
+    try{
+      ownerLimitLine.style.display = "block";
+      ownerLimitLine.innerHTML = "⏳ Checking plan limit...";
+
+      const snap = await getDoc(doc(db, "users", u.uid));
+      if(!snap.exists()){
+        ownerLimitLine.innerHTML = "⚠️ User setup incomplete. Please complete User Setup ✅";
+        return;
+      }
+
+      const data = snap.data();
+
+      planSelected = data.planSelected || "";
+      ownerMonthlyLimit = Number(data.ownerMonthlyLimit || 0);
+      ownerMonthlyUsed = Number(data.ownerMonthlyUsed || 0);
+      ownerMonthlyResetAt = toDateSafe(data.ownerMonthlyResetAt);
+
+      // ✅ Monthly reset if date passed
+      const now = new Date();
+      if(ownerMonthlyResetAt && now.getTime() >= ownerMonthlyResetAt.getTime()){
+        ownerMonthlyUsed = 0;
+
+        // ✅ update reset in firebase (auto)
+        await setDoc(doc(db, "users", u.uid), {
+          ownerMonthlyUsed: 0,
+          ownerMonthlyResetAt: firstDayNextMonth(now),
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      }
+
+      // ✅ If Owner plan, show limit status
+      if(ownerMonthlyLimit > 0){
+        ownerLimitLine.innerHTML =
+          `✅ Owner Monthly Listing Limit: <b>${ownerMonthlyUsed}/${ownerMonthlyLimit}</b> (Plan: <b>${planSelected}</b>)`;
+
+        // ✅ lock submit if reached
+        if(ownerMonthlyUsed >= ownerMonthlyLimit){
+          ownerLimitLine.innerHTML =
+            `🔒 Monthly Listing Limit Reached: <b>${ownerMonthlyUsed}/${ownerMonthlyLimit}</b> ✅ <br/>Renew / Next month wait ✅`;
+
+          submitBtn.disabled = true;
+          submitBtn.style.opacity = "0.6";
+        }else{
+          submitBtn.disabled = false;
+          submitBtn.style.opacity = "1";
+        }
+      }else{
+        // Broker => no limit
+        ownerLimitLine.style.display = "none";
+      }
+
+    }catch(e){
+      console.log(e);
+      ownerLimitLine.style.display = "block";
+      ownerLimitLine.innerHTML = "❌ Error checking plan limit";
+    }
+  }
+
   async function init(){
-    u = await VPI.requireLogin(); // ✅ FIXED
+    u = await VPI.requireLogin();
+    await loadUserPlanLimit();
   }
   init();
 
@@ -253,9 +341,12 @@
     try{
       if(!u) u = await VPI.requireLogin();
 
-      // ✅ for normal users you can require KYC+Plan, admin bypass already in vpi.js
-      // await VPI.requireKycApproved();
-      // await VPI.requireActivePlan();
+      // ✅ Re-check limit just before submit (for safety)
+      await loadUserPlanLimit();
+
+      if(ownerMonthlyLimit > 0 && ownerMonthlyUsed >= ownerMonthlyLimit){
+        return alert(`🔒 Monthly Listing Limit Reached (${ownerMonthlyUsed}/${ownerMonthlyLimit}) ✅`);
+      }
 
       const title = titleEl.value.trim();
       const type = typeEl.value;
@@ -313,6 +404,15 @@
         status: "PENDING",
         createdAt: serverTimestamp()
       });
+
+      // ✅ IMPORTANT: After property submit -> increment Owner monthly used
+      if(ownerMonthlyLimit > 0){
+        const newUsed = Number(ownerMonthlyUsed || 0) + 1;
+        await setDoc(doc(db, "users", u.uid), {
+          ownerMonthlyUsed: newUsed,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      }
 
       prog.value = 100;
       upMsg.innerHTML = "✅ Upload complete";

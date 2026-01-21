@@ -16,6 +16,7 @@
     }
     .btn.green{background:#22c55e}
     .btn.gray{background:#64748b}
+    .btn.orange{background:#ff7a00}
     .mini{font-size:12px;color:#666}
     .title{font-size:16px;font-weight:900;color:#0b1b3a;margin:0 0 6px}
     .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:12px}
@@ -36,7 +37,7 @@
     <a class="btn gray" href="index.html">⬅ Back Dashboard</a>
 
     <p class="title" style="margin-top:12px;">Choose / Renew Plan ✅</p>
-    <div class="mini">Plan select -> payment proof upload -> admin approve -> ACTIVE ✅</div>
+    <div class="mini">Plan select -> payment -> payment proof upload -> admin approve -> ACTIVE ✅</div>
 
     <div class="note mini">
       ✅ Agar plan expire ho gaya hai to “Renew” karo.<br/>
@@ -44,7 +45,22 @@
     </div>
   </div>
 
-  <div class="grid">
+  <!-- ✅ Broker / Owner Tab -->
+  <div class="card" style="margin-top:12px;">
+    <p class="title">Select Plan Type ✅</p>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+      <button class="btn gray" id="brokerTab" style="flex:1;">Broker Plans</button>
+      <button class="btn gray" id="ownerTab" style="flex:1;">Owner Plans</button>
+    </div>
+
+    <div class="mini" style="margin-top:8px;">
+      ✅ Plan select karte hi Payment (UPI / QR) show hoga ✅
+    </div>
+  </div>
+
+  <!-- ✅ BROKER PLANS -->
+  <div class="grid" id="brokerGrid">
     <div class="p">
       <p class="title">BASIC</p>
       <div class="price">₹499</div>
@@ -79,6 +95,48 @@
     </div>
   </div>
 
+  <!-- ✅ OWNER PLANS -->
+  <div class="grid" id="ownerGrid" style="display:none;">
+    <div class="p">
+      <p class="title">OWNER BASIC</p>
+      <div class="price">₹149</div>
+      <div class="mini">2 listing monthly ✅</div>
+      <div class="mini">30 days live ✅</div>
+      <button class="btn green" data-ownerplan="OWNER_BASIC">Select / Renew OWNER BASIC ✅</button>
+    </div>
+
+    <div class="p">
+      <p class="title">OWNER STANDARD</p>
+      <div class="price">₹299</div>
+      <div class="mini">4 listing monthly ✅</div>
+      <div class="mini">60 days live ✅</div>
+      <button class="btn green" data-ownerplan="OWNER_STANDARD">Select / Renew OWNER STANDARD ✅</button>
+    </div>
+
+    <div class="p">
+      <p class="title">OWNER PREMIUM</p>
+      <div class="price">₹699</div>
+      <div class="mini">6 listing monthly ✅</div>
+      <div class="mini">90 days live ✅</div>
+      <button class="btn green" data-ownerplan="OWNER_PREMIUM">Select / Renew OWNER PREMIUM ✅</button>
+    </div>
+  </div>
+
+  <!-- ✅ PAYMENT BOX (UPI + QR + Proof Upload) -->
+  <div class="card" id="paymentBox" style="display:none;">
+    <p class="title">Payment (UPI / QR) ✅</p>
+    <div class="mini" id="selectedPlanText"></div>
+
+    <div id="qrBox" style="text-align:center;margin-top:10px;"></div>
+
+    <button class="btn green" id="payNowBtn">Pay Now ✅</button>
+    <button class="btn orange" id="uploadProofBtn">Upload Payment Proof ✅</button>
+
+    <div class="mini" style="margin-top:8px;">
+      UPI ID: <b>8305070599@superyes</b>
+    </div>
+  </div>
+
   <div class="card">
     <div id="msg" class="mini">Ready ✅</div>
   </div>
@@ -97,18 +155,125 @@
 
   const u = VPI.requireLogin();
 
+  // ✅ UPI settings
+  const UPI_ID = "8305070599@superyes";
+  const UPI_NAME = "SPVerifiedPropertyIndia";
+
+  // ✅ UI Elements
+  const paymentBox = document.getElementById("paymentBox");
+  const selectedPlanText = document.getElementById("selectedPlanText");
+  const qrBox = document.getElementById("qrBox");
+  const payNowBtn = document.getElementById("payNowBtn");
+  const uploadProofBtn = document.getElementById("uploadProofBtn");
+
+  const brokerTab = document.getElementById("brokerTab");
+  const ownerTab = document.getElementById("ownerTab");
+
+  const brokerGrid = document.getElementById("brokerGrid");
+  const ownerGrid = document.getElementById("ownerGrid");
+
+  let selectedAmount = 0;
+
+  // ✅ Amount mapping
+  function getPlanAmount(plan){
+    if(plan === "BASIC") return 499;
+    if(plan === "STANDARD") return 999;
+    if(plan === "PREMIUM") return 1999;
+
+    if(plan === "OWNER_BASIC") return 149;
+    if(plan === "OWNER_STANDARD") return 299;
+    if(plan === "OWNER_PREMIUM") return 699;
+
+    return 0;
+  }
+
+  // ✅ Days mapping (IMPORTANT: Auto Expiry)
+  function getPlanDays(plan){
+    if(plan === "BASIC") return 30;
+    if(plan === "STANDARD") return 90;
+    if(plan === "PREMIUM") return 180;
+
+    if(plan === "OWNER_BASIC") return 30;
+    if(plan === "OWNER_STANDARD") return 60;
+    if(plan === "OWNER_PREMIUM") return 90;
+
+    return 0;
+  }
+
+  // ✅ Create expiry date
+  function addDays(dateObj, days){
+    const d = new Date(dateObj);
+    d.setDate(d.getDate() + Number(days || 0));
+    return d;
+  }
+
+  // ✅ Show payment box with QR
+  function showPayment(plan){
+    selectedAmount = getPlanAmount(plan);
+
+    paymentBox.style.display = "block";
+    selectedPlanText.innerHTML = `✅ Selected Plan: <b>${plan}</b> | Amount: <b>₹${selectedAmount}</b>`;
+
+    const upiLink = `upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(UPI_NAME)}&am=${selectedAmount}&cu=INR`;
+
+    qrBox.innerHTML = `
+      <p class="mini"><b>Scan QR & Pay ✅</b></p>
+      <img style="width:220px;border-radius:12px;"
+        src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiLink)}" />
+      <p class="mini" style="margin-top:8px;">UPI: <b>${UPI_ID}</b></p>
+    `;
+
+    payNowBtn.onclick = ()=>{
+      window.location.href = upiLink;
+    };
+
+    uploadProofBtn.onclick = ()=>{
+      location.href = "payment.html";
+    };
+  }
+
+  // ✅ Tabs switching
+  brokerTab.onclick = ()=>{
+    brokerGrid.style.display = "grid";
+    ownerGrid.style.display = "none";
+  };
+
+  ownerTab.onclick = ()=>{
+    brokerGrid.style.display = "none";
+    ownerGrid.style.display = "grid";
+  };
+
   async function selectPlan(plan){
     msg.innerHTML = "⏳ Saving plan...";
+
     try{
+      const planDays = getPlanDays(plan);
+      const now = new Date();
+      const expiresAt = addDays(now, planDays);
+
       await setDoc(doc(db,"users", u.uid), {
         planSelected: plan,
         planStatus: "PENDING",
+
+        // ✅ NEW: Auto expiry save
+        planDays: planDays,
+        planStartAt: now,
+        planExpiresAt: expiresAt,
+
         updatedAt: serverTimestamp()
       }, { merge: true });
 
-      msg.innerHTML = `✅ Plan selected: <b>${plan}</b> | Now upload payment proof ✅`;
-      alert(`✅ Plan selected: ${plan}\nअब Payment Proof upload करो ✅`);
-      location.href = "payment.html";
+      msg.innerHTML = `✅ Plan selected: <b>${plan}</b> | Expiry auto set ✅`;
+
+      alert(
+        `✅ Plan selected: ${plan}\n` +
+        `✅ Validity: ${planDays} Days\n` +
+        `✅ Expiry auto set ✅\n\n` +
+        `अब QR से Payment करो ✅\nफिर Payment Proof Upload करो ✅`
+      );
+
+      // ✅ IMPORTANT: redirect हटाया (QR दिखाने के लिए)
+      // location.href = "payment.html";
 
     }catch(e){
       console.log(e);
@@ -117,10 +282,21 @@
     }
   }
 
+  // ✅ Broker Plan Click
   document.querySelectorAll("[data-plan]").forEach(btn=>{
     btn.onclick = ()=>{
       const plan = btn.getAttribute("data-plan");
       selectPlan(plan);
+      showPayment(plan);
+    };
+  });
+
+  // ✅ Owner Plan Click
+  document.querySelectorAll("[data-ownerplan]").forEach(btn=>{
+    btn.onclick = ()=>{
+      const plan = btn.getAttribute("data-ownerplan");
+      selectPlan(plan);
+      showPayment(plan);
     };
   });
 </script>

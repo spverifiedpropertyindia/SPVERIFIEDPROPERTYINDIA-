@@ -42,6 +42,14 @@
     .b4{background:#fef9c3;color:#854d0e}
 
     .supportBox{background:#fff7ed;border:1px solid #ffd8a8;padding:12px;border-radius:14px;margin-top:12px}
+
+    /* ✅ NEW: Reminder UI */
+    .alertBox{
+      padding:12px;border-radius:14px;margin-top:10px;font-weight:900
+    }
+    .alertGreen{background:#dcfce7;border:1px solid #86efac;color:#166534}
+    .alertYellow{background:#fef9c3;border:1px solid #fde047;color:#854d0e}
+    .alertRed{background:#fee2e2;border:1px solid #fecaca;color:#991b1b}
   </style>
 </head>
 
@@ -59,6 +67,12 @@
       <div class="mini" id="planLine">Plan: ...</div>
       <div class="mini" id="expLine">Expiry: ...</div>
       <div class="mini" id="lockMsg" style="margin-top:8px;font-weight:900;"></div>
+
+      <!-- ✅ NEW: Plan Reminder Box -->
+      <div id="reminderBox" style="display:none;" class="alertBox"></div>
+
+      <!-- ✅ NEW: Renew Plan Button -->
+      <a class="btn orange" id="renewBtn" href="plans.html" style="display:none;">Renew Plan Now ✅</a>
     </div>
 
     <a class="btn gray" href="user-setup.html">User Setup</a>
@@ -120,6 +134,9 @@
   const expLine = document.getElementById("expLine");
   const lockMsg = document.getElementById("lockMsg");
 
+  const reminderBox = document.getElementById("reminderBox");
+  const renewBtn = document.getElementById("renewBtn");
+
   const addPropBtn = document.getElementById("addPropBtn");
   const adminBtn = document.getElementById("adminBtn");
   const logoutBtn = document.getElementById("logoutBtn");
@@ -136,6 +153,33 @@
     if(!ts) return null;
     if(ts.toDate) return ts.toDate();
     return new Date(ts);
+  }
+
+  // ✅ NEW: Reminder system (1 time per day per user)
+  function todayKey(){
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    const dd = String(d.getDate()).padStart(2,"0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function canShowReminder(uid){
+    try{
+      const k = `planReminder_${uid}_${todayKey()}`;
+      const already = localStorage.getItem(k);
+      if(already) return false;
+      localStorage.setItem(k, "1");
+      return true;
+    }catch(e){
+      return true; // अगर localstorage blocked हो तो भी reminder चले
+    }
+  }
+
+  function showReminderUI(type, text){
+    reminderBox.style.display = "block";
+    reminderBox.className = "alertBox " + type;
+    reminderBox.innerHTML = text;
   }
 
   async function refresh(){
@@ -157,6 +201,10 @@
         planLine.innerHTML = `Plan: ${badge("PENDING")}`;
         expLine.innerHTML = `Expiry: -`;
         lockMsg.innerHTML = "⚠️ Please complete User Setup first ✅";
+
+        reminderBox.style.display = "none";
+        renewBtn.style.display = "none";
+
         addPropBtn.style.pointerEvents = "none";
         addPropBtn.style.opacity = "0.5";
         return;
@@ -172,6 +220,11 @@
       planLine.innerHTML = `Plan: <b>${planSelected}</b> ${badge(planStatus)}`;
 
       const expiresAt = toDateSafe(data.planExpiresAt);
+
+      // ✅ Reset reminder UI each refresh
+      reminderBox.style.display = "none";
+      renewBtn.style.display = "none";
+
       if(expiresAt){
         const now = new Date();
         const diffMs = expiresAt.getTime() - now.getTime();
@@ -179,17 +232,45 @@
 
         if(daysLeft <= 0){
           expLine.innerHTML = `Expiry: <b>Expired</b>`;
+          renewBtn.style.display = "block";
+
+          showReminderUI("alertRed", `❌ आपका Plan Expire हो चुका है! अभी Renew करें ✅`);
+
+          // ✅ popup reminder (only once per day)
+          if(canShowReminder(u.uid)){
+            alert("❌ आपका Plan Expire हो चुका है! अभी Renew करो ✅");
+          }
+
         }else{
           expLine.innerHTML = `Expiry: <b>${daysLeft} days left</b>`;
+
+          // ✅ Warning reminders
+          if(daysLeft <= 3){
+            renewBtn.style.display = "block";
+            showReminderUI("alertYellow", `⚠️ आपका Plan <b>${daysLeft} दिन</b> में expire होने वाला है। अभी Renew कर लो ✅`);
+
+            if(canShowReminder(u.uid)){
+              alert(`⚠️ आपका Plan ${daysLeft} दिन में expire होगा। अभी Renew कर लो ✅`);
+            }
+          }else{
+            // ✅ plan ok
+            showReminderUI("alertGreen", `✅ आपका Plan Active है। No problem ✅`);
+          }
         }
       }else{
         expLine.innerHTML = `Expiry: -`;
+
+        // ✅ अगर expiry नहीं है तो भी suggestion
+        if(planStatus === "ACTIVE"){
+          showReminderUI("alertYellow", `⚠️ Plan Active है लेकिन Expiry date सेट नहीं है। Admin से expiry update करवाओ ✅`);
+        }else{
+          showReminderUI("alertYellow", `⚠️ Plan Select करके payment करो ✅`);
+        }
       }
 
       // ✅ LOCK LOGIC FOR ADD PROPERTY
       let lockText = "";
 
-      // KYC must be approved
       if(kycStatus !== "APPROVED"){
         lockText = "🔒 Property Add Locked: KYC approval pending ✅";
       } else if(planStatus !== "ACTIVE"){
@@ -218,7 +299,8 @@
     location.href = "user-login.html";
   };
 
-  setInterval(refresh, 1000);
+  // ✅ Refresh every 5 seconds (1 second मत करो)
+  setInterval(refresh, 5000);
   refresh();
 </script>
 

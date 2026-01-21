@@ -25,6 +25,8 @@
     .btn.red{background:#ff3b3b}
     .btn.green{background:#22c55e}
     .btn.gray{background:#64748b}
+    .btn.orange{background:#ff7a00}
+
     .mini{font-size:12px;color:#666}
     .title{font-size:16px;font-weight:900;color:#0b1b3a;margin:0 0 6px}
     table{width:100%;border-collapse:collapse;margin-top:10px;overflow:auto}
@@ -57,6 +59,20 @@
       <a class="btn gray" href="index.html">⬅ Back Dashboard</a>
       <button class="btn red" id="logoutBtn">Logout</button>
     </div>
+  </div>
+
+  <!-- ✅ NEW: OWNER LIMIT RESET TOOL -->
+  <div class="card">
+    <p class="title">🔧 Owner Monthly Limit Reset (PRO)</p>
+    <div class="mini">UID डालकर Owner Monthly Used reset कर सकते हो ✅</div>
+
+    <div class="row" style="margin-top:10px;">
+      <input id="resetUid" placeholder="Enter User UID" />
+      <button class="btn orange" id="resetOwnerLimitBtn">Reset Owner Monthly Limit ✅</button>
+      <button class="btn" id="refreshAllBtn">Refresh All ✅</button>
+    </div>
+
+    <div class="mini" id="resetMsg" style="margin-top:8px;"></div>
   </div>
 
   <!-- USERS -->
@@ -102,7 +118,7 @@
 <script type="module">
   import { VPI } from "./vpi.js?v=2";
 
-  import { getFirestore, collection, getDocs, doc, updateDoc, query, orderBy, limit } 
+  import { getFirestore, collection, getDocs, doc, updateDoc, query, orderBy, limit, setDoc, getDoc }
     from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
   import { getApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 
@@ -120,6 +136,12 @@
   const refreshPayments = document.getElementById("refreshPayments");
   const refreshProps = document.getElementById("refreshProps");
 
+  // ✅ NEW RESET TOOL ELEMENTS
+  const resetUid = document.getElementById("resetUid");
+  const resetOwnerLimitBtn = document.getElementById("resetOwnerLimitBtn");
+  const resetMsg = document.getElementById("resetMsg");
+  const refreshAllBtn = document.getElementById("refreshAllBtn");
+
   // ✅ Admin Protect
   try{
     VPI.requireAdmin();
@@ -136,10 +158,59 @@
   function badge(status){
     const s = (status || "").toUpperCase();
     if(s === "APPROVED") return `<span class="badge b2">APPROVED</span>`;
+    if(s === "ACTIVE") return `<span class="badge b2">ACTIVE</span>`;
     if(s === "REJECTED") return `<span class="badge b3">REJECTED</span>`;
     if(s === "PENDING") return `<span class="badge b4">PENDING</span>`;
     return `<span class="badge b1">${s || "UNKNOWN"}</span>`;
   }
+
+  function firstDayNextMonth(dateObj){
+    const d = new Date(dateObj);
+    return new Date(d.getFullYear(), d.getMonth() + 1, 1);
+  }
+
+  // ✅ NEW: Reset Owner Monthly Limit
+  async function resetOwnerMonthlyLimit(){
+    try{
+      const uid = (resetUid.value || "").trim();
+      if(!uid) return alert("❌ Please enter User UID");
+
+      resetMsg.innerHTML = "⏳ Resetting owner monthly limit...";
+
+      // check user exists
+      const snap = await getDoc(doc(db, "users", uid));
+      if(!snap.exists()){
+        resetMsg.innerHTML = "❌ User not found";
+        return alert("❌ User not found");
+      }
+
+      const now = new Date();
+
+      await setDoc(doc(db, "users", uid), {
+        ownerMonthlyUsed: 0,
+        ownerMonthlyResetAt: firstDayNextMonth(now),
+        updatedAt: now
+      }, { merge: true });
+
+      resetMsg.innerHTML = `✅ Reset done for UID: <b>${uid}</b>`;
+      alert("✅ Owner Monthly Limit Reset Successful ✅");
+
+      loadUsers();
+
+    }catch(e){
+      console.log(e);
+      resetMsg.innerHTML = "❌ Reset failed";
+      alert("❌ Reset failed");
+    }
+  }
+
+  resetOwnerLimitBtn.onclick = resetOwnerMonthlyLimit;
+
+  refreshAllBtn.onclick = ()=>{
+    loadUsers();
+    loadPayments();
+    loadProperties();
+  };
 
   // ✅ Load Users
   async function loadUsers(){
@@ -159,11 +230,17 @@
           <th>Plan</th>
           <th>Plan Status</th>
           <th>KYC</th>
+          <th>Owner Limit</th>
+          <th>Actions</th>
         </tr>
       `;
 
       snap.forEach(d=>{
         const u = d.data();
+
+        const limit = Number(u.ownerMonthlyLimit || 0);
+        const used = Number(u.ownerMonthlyUsed || 0);
+
         html += `
           <tr>
             <td>
@@ -173,12 +250,29 @@
             <td>${u.planSelected || "-"}</td>
             <td>${badge(u.planStatus || "-")}</td>
             <td>${badge(u.kycStatus || "PENDING")}</td>
+
+            <td>
+              ${limit > 0 ? `<b>${used}/${limit}</b>` : `<span class="mini">No limit</span>`}
+            </td>
+
+            <td>
+              <button class="btn orange" data-resetuid="${d.id}">Reset Limit</button>
+            </td>
           </tr>
         `;
       });
 
       html += `</table>`;
       usersBox.innerHTML = html;
+
+      // ✅ quick reset from table
+      usersBox.querySelectorAll("[data-resetuid]").forEach(btn=>{
+        btn.onclick = async ()=>{
+          const uid = btn.getAttribute("data-resetuid");
+          resetUid.value = uid;
+          await resetOwnerMonthlyLimit();
+        };
+      });
 
     }catch(e){
       console.log(e);
@@ -379,7 +473,6 @@
   loadUsers();
   loadPayments();
   loadProperties();
-
 </script>
 </body>
 </html>
