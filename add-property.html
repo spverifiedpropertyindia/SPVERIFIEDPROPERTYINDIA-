@@ -66,7 +66,6 @@
     <p class="title" style="margin-top:12px;">🏠 Add New Property</p>
     <div class="mini">Min 3 Photos + GPS compulsory ✅</div>
 
-    <!-- ✅ NEW: Owner limit status line -->
     <div class="warn mini" id="ownerLimitLine" style="margin-top:10px; display:none;">
       ⏳ Checking plan limit...
     </div>
@@ -118,15 +117,15 @@
     <div class="box">
       <p class="title">📍 GPS Location (Required)</p>
       <div class="mini" id="gpsText">GPS not captured ❌</div>
-
       <button class="btn orange" id="gpsBtn">Capture GPS ✅</button>
     </div>
 
     <div class="box">
       <p class="title">📸 Upload Property Photos (Min 3)</p>
-      <div class="mini">You can select multiple photos ✅</div>
+      <div class="mini">✅ ONLY Camera photos allowed + Watermark Auto ✅</div>
 
-      <input type="file" id="photos" accept="image/*" multiple />
+      <!-- ✅ ONLY CAMERA -->
+      <input type="file" id="photos" accept="image/*" capture="environment" multiple />
 
       <div class="thumbs" id="thumbs"></div>
       <progress id="prog" value="0" max="100"></progress>
@@ -137,7 +136,7 @@
     <div id="msg" class="mini" style="margin-top:12px;"></div>
 
     <div class="note mini">
-      ✅ Admin panel से approve होने के बाद ही Public Listings में दिखेगी ✅
+      ✅ Upload होने के पहले photo पर Date/Time + GPS + City + Mobile + PropertyID watermark लग जाएगा ✅
     </div>
   </div>
 
@@ -190,8 +189,10 @@
 
   const ownerLimitLine = document.getElementById("ownerLimitLine");
 
-  // ✅ FIX: Wait for login properly
   let u = null;
+
+  // ✅ NEW: Property ID for watermark + record
+  let propertyId = "SPVPI-" + Date.now();
 
   // ✅ Owner Limit values
   let ownerMonthlyLimit = 0;
@@ -228,12 +229,10 @@
       ownerMonthlyUsed = Number(data.ownerMonthlyUsed || 0);
       ownerMonthlyResetAt = toDateSafe(data.ownerMonthlyResetAt);
 
-      // ✅ Monthly reset if date passed
       const now = new Date();
       if(ownerMonthlyResetAt && now.getTime() >= ownerMonthlyResetAt.getTime()){
         ownerMonthlyUsed = 0;
 
-        // ✅ update reset in firebase (auto)
         await setDoc(doc(db, "users", u.uid), {
           ownerMonthlyUsed: 0,
           ownerMonthlyResetAt: firstDayNextMonth(now),
@@ -241,12 +240,10 @@
         }, { merge: true });
       }
 
-      // ✅ If Owner plan, show limit status
       if(ownerMonthlyLimit > 0){
         ownerLimitLine.innerHTML =
           `✅ Owner Monthly Listing Limit: <b>${ownerMonthlyUsed}/${ownerMonthlyLimit}</b> (Plan: <b>${planSelected}</b>)`;
 
-        // ✅ lock submit if reached
         if(ownerMonthlyUsed >= ownerMonthlyLimit){
           ownerLimitLine.innerHTML =
             `🔒 Monthly Listing Limit Reached: <b>${ownerMonthlyUsed}/${ownerMonthlyLimit}</b> ✅ <br/>Renew / Next month wait ✅`;
@@ -258,7 +255,6 @@
           submitBtn.style.opacity = "1";
         }
       }else{
-        // Broker => no limit
         ownerLimitLine.style.display = "none";
       }
 
@@ -319,21 +315,114 @@
     }
   };
 
+  // ✅ ONLY CAMERA VALIDATION
+  function validateCameraPhotos(files){
+    for(const f of files){
+      if(!f.type || !f.type.startsWith("image/")){
+        alert("❌ Only camera images allowed!");
+        throw new Error("INVALID_IMAGE_FILE");
+      }
+    }
+  }
+
+  // ✅ Watermark helper
+  function formatDateTime(d){
+    const pad = (n)=> String(n).padStart(2,"0");
+    return `${pad(d.getDate())}-${pad(d.getMonth()+1)}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+
+  async function addWatermarkToImage(file, gpsObj){
+    const imgURL = URL.createObjectURL(file);
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = imgURL;
+
+    await new Promise((resolve, reject)=>{
+      img.onload = resolve;
+      img.onerror = reject;
+    });
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = img.naturalWidth || img.width;
+    canvas.height = img.naturalHeight || img.height;
+
+    // draw original
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    // watermark text
+    const now = new Date();
+    const line1 = "SP VERIFIED PROPERTY INDIA";
+    const line2 = `DATE: ${formatDateTime(now)}`;
+    const line3 = gpsObj ? `GPS: ${gpsObj.lat.toFixed(6)}, ${gpsObj.lng.toFixed(6)}` : "GPS: NOT CAPTURED";
+    const line4 = `CITY: ${(cityEl.value || "").trim() || "N/A"}`;
+    const line5 = `MOBILE: ${(mobileEl.value || "").trim() || "N/A"}`;
+    const line6 = `PROPERTY ID: ${propertyId}`;
+
+    const padding = Math.max(20, Math.floor(canvas.width * 0.02));
+
+    // ✅ increased box height for 6 lines
+    const boxH = Math.max(220, Math.floor(canvas.height * 0.18));
+
+    // black transparent box
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fillRect(0, canvas.height - boxH, canvas.width, boxH);
+
+    // text style
+    const fontSize1 = Math.max(26, Math.floor(canvas.width * 0.035));
+    const fontSize2 = Math.max(20, Math.floor(canvas.width * 0.028));
+
+    ctx.fillStyle = "#ffffff";
+    ctx.textBaseline = "bottom";
+
+    ctx.font = `bold ${fontSize1}px Arial`;
+    ctx.fillText(line1, padding, canvas.height - boxH + padding + fontSize1);
+
+    ctx.font = `bold ${fontSize2}px Arial`;
+    ctx.fillText(line2, padding, canvas.height - padding - (fontSize2 * 4.8));
+    ctx.fillText(line3, padding, canvas.height - padding - (fontSize2 * 3.6));
+    ctx.fillText(line4, padding, canvas.height - padding - (fontSize2 * 2.4));
+    ctx.fillText(line5, padding, canvas.height - padding - (fontSize2 * 1.2));
+    ctx.fillText(line6, padding, canvas.height - padding);
+
+    URL.revokeObjectURL(imgURL);
+
+    const watermarkedBlob = await new Promise((resolve)=>{
+      canvas.toBlob((b)=> resolve(b), "image/jpeg", 0.92);
+    });
+
+    return watermarkedBlob;
+  }
+
   // ✅ Photo preview
   photosEl.onchange = ()=>{
     thumbsEl.innerHTML = "";
+
     const files = Array.from(photosEl.files || []);
+    if(files.length){
+      try{
+        validateCameraPhotos(files);
+      }catch(e){
+        photosEl.value = "";
+        return;
+      }
+    }
+
     files.slice(0,12).forEach(f=>{
-      const img = document.createElement("img");
-      img.src = URL.createObjectURL(f);
-      thumbsEl.appendChild(img);
+      const im = document.createElement("img");
+      im.src = URL.createObjectURL(f);
+      thumbsEl.appendChild(im);
     });
   };
 
-  async function uploadOnePhoto(file){
-    const path = `properties/${u.uid}/${Date.now()}_${Math.random().toString(16).slice(2)}.jpg`;
+  async function uploadOnePhotoWithWatermark(file){
+    // ✅ Add watermark before upload
+    const wmBlob = await addWatermarkToImage(file, gps);
+
+    const path = `properties/${u.uid}/${propertyId}/${Date.now()}_${Math.random().toString(16).slice(2)}.jpg`;
     const r = ref(storage, path);
-    await uploadBytes(r, file);
+    await uploadBytes(r, wmBlob);
     return await getDownloadURL(r);
   }
 
@@ -341,12 +430,14 @@
     try{
       if(!u) u = await VPI.requireLogin();
 
-      // ✅ Re-check limit just before submit (for safety)
       await loadUserPlanLimit();
 
       if(ownerMonthlyLimit > 0 && ownerMonthlyUsed >= ownerMonthlyLimit){
         return alert(`🔒 Monthly Listing Limit Reached (${ownerMonthlyUsed}/${ownerMonthlyLimit}) ✅`);
       }
+
+      // ✅ NEW: fresh property id each submit
+      propertyId = "SPVPI-" + Date.now();
 
       const title = titleEl.value.trim();
       const type = typeEl.value;
@@ -367,8 +458,10 @@
       if(!gps) return alert("❌ GPS capture compulsory");
       if(photos.length < 3) return alert("❌ Minimum 3 photos required");
 
+      validateCameraPhotos(photos);
+
       submitBtn.disabled = true;
-      msg.innerHTML = "⏳ Uploading photos...";
+      msg.innerHTML = "⏳ Uploading photos (with watermark)...";
       upMsg.innerHTML = "Uploading...";
       prog.value = 5;
 
@@ -376,7 +469,7 @@
       const total = photos.length;
 
       for(let i=0; i<photos.length; i++){
-        const url = await uploadOnePhoto(photos[i]);
+        const url = await uploadOnePhotoWithWatermark(photos[i]);
         urls.push(url);
 
         const pct = Math.round(((i+1) / total) * 70);
@@ -387,6 +480,7 @@
       prog.value = 85;
 
       await addDoc(collection(db,"properties"), {
+        propertyId,
         uid: u.uid,
         email: u.email || "",
 
@@ -405,7 +499,6 @@
         createdAt: serverTimestamp()
       });
 
-      // ✅ IMPORTANT: After property submit -> increment Owner monthly used
       if(ownerMonthlyLimit > 0){
         const newUsed = Number(ownerMonthlyUsed || 0) + 1;
         await setDoc(doc(db, "users", u.uid), {
@@ -417,7 +510,7 @@
       prog.value = 100;
       upMsg.innerHTML = "✅ Upload complete";
       msg.innerHTML = "✅ Property submitted (Pending Admin Approval)";
-      alert("✅ Property submitted! Admin approval pending.");
+      alert("✅ Property submitted with watermark! Admin approval pending.");
       location.href = "index.html";
 
     }catch(e){
