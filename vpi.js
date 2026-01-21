@@ -2,8 +2,7 @@ import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12
 import {
   getAuth,
   GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   onAuthStateChanged,
   setPersistence,
   browserLocalPersistence,
@@ -16,13 +15,16 @@ import {
   getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-console.log("✅ VPI PRO LOADED");
+console.log("✅ VPI PRO LOADED (POPUP FIX)");
 
 const firebaseConfig = {
   apiKey: "AIzaSyDKyu_TDnbqE6yO9kx0pahFnxqL72q38ME",
   authDomain: "raazsahuteam-d02de.firebaseapp.com",
   projectId: "raazsahuteam-d02de",
-  storageBucket: "raazsahuteam-d02de.firebasestorage.app",
+
+  // ✅ IMPORTANT FIX (Bucket must be appspot.com)
+  storageBucket: "raazsahuteam-d02de.appspot.com",
+
   messagingSenderId: "307824931465",
   appId: "1:307824931465:web:9f6de256e9d8eb7f528c58",
   measurementId: "G-BG0SCBN118"
@@ -48,27 +50,11 @@ function goDashboard() {
 onAuthStateChanged(auth, (u) => {
   _user = u || null;
 
+  // ✅ If already logged in and user is on login page, redirect to dashboard
   if (_user && isLoginPage()) {
     goDashboard();
   }
 });
-
-// ✅ Redirect result handle
-(async () => {
-  try {
-    const result = await getRedirectResult(auth);
-    if (result && result.user) {
-      _user = result.user;
-      console.log("✅ Redirect Login Success:", result.user.email);
-
-      if (isLoginPage()) {
-        goDashboard();
-      }
-    }
-  } catch (e) {
-    console.log("❌ Redirect result error:", e);
-  }
-})();
 
 // ✅ helper: get user profile doc
 async function getUserDoc() {
@@ -95,17 +81,25 @@ export const VPI = {
     return !!_user && _user.email === "raazsahu1000@gmail.com";
   },
 
+  // ✅ FIXED: POPUP LOGIN (works best on GitHub Pages + mobile)
   async googleLogin() {
     await setPersistence(auth, browserLocalPersistence);
 
+    // already logged
     if (auth.currentUser) {
       _user = auth.currentUser;
       if (isLoginPage()) goDashboard();
       return auth.currentUser;
     }
 
-    await signInWithRedirect(auth, provider);
-    return null;
+    // popup login
+    const res = await signInWithPopup(auth, provider);
+    _user = res.user;
+
+    console.log("✅ Popup Login Success:", _user?.email);
+
+    if (isLoginPage()) goDashboard();
+    return _user;
   },
 
   async logout() {
@@ -135,7 +129,7 @@ export const VPI = {
 
   // ✅ PRO: KYC Approved required
   async requireKycApproved() {
-    const u = this.requireLogin();
+    this.requireLogin();
     const profile = await getUserDoc();
     if (!profile || profile.kycStatus !== "APPROVED") {
       alert("❌ KYC not approved yet. Please complete KYC and wait for admin approval ✅");
@@ -147,7 +141,7 @@ export const VPI = {
 
   // ✅ PRO: Plan Active + Not Expired required
   async requireActivePlan() {
-    const u = this.requireLogin();
+    this.requireLogin();
     const profile = await getUserDoc();
 
     if (!profile || profile.planStatus !== "ACTIVE") {
