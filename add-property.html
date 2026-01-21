@@ -18,7 +18,6 @@
     .btn.green{background:#22c55e}
     .btn.gray{background:#64748b}
     .btn.orange{background:#ff7a00}
-    .btn.red{background:#ff3b3b}
 
     .mini{font-size:12px;color:#666}
     .title{font-size:16px;font-weight:900;color:#0b1b3a;margin:0 0 6px}
@@ -124,7 +123,7 @@
       <p class="title">📸 Upload Property Photos (Min 3)</p>
       <div class="mini">✅ ONLY Camera photos allowed + Watermark Auto ✅</div>
 
-      <!-- ✅ ONLY CAMERA -->
+      <!-- ✅ Only camera open (Back Camera Full Screen) -->
       <input type="file" id="photos" accept="image/*" capture="environment" multiple />
 
       <div class="thumbs" id="thumbs"></div>
@@ -136,7 +135,7 @@
     <div id="msg" class="mini" style="margin-top:12px;"></div>
 
     <div class="note mini">
-      ✅ Upload होने के पहले photo पर Date/Time + GPS + City + Mobile + PropertyID watermark लग जाएगा ✅
+      ✅ Upload होने के पहले photo पर Date/Time + GPS watermark लग जाएगा ✅
     </div>
   </div>
 
@@ -191,10 +190,7 @@
 
   let u = null;
 
-  // ✅ NEW: Property ID for watermark + record
-  let propertyId = "SPVPI-" + Date.now();
-
-  // ✅ Owner Limit values
+  // ✅ Owner limit values
   let ownerMonthlyLimit = 0;
   let ownerMonthlyUsed = 0;
   let ownerMonthlyResetAt = null;
@@ -247,7 +243,6 @@
         if(ownerMonthlyUsed >= ownerMonthlyLimit){
           ownerLimitLine.innerHTML =
             `🔒 Monthly Listing Limit Reached: <b>${ownerMonthlyUsed}/${ownerMonthlyLimit}</b> ✅ <br/>Renew / Next month wait ✅`;
-
           submitBtn.disabled = true;
           submitBtn.style.opacity = "0.6";
         }else{
@@ -315,7 +310,7 @@
     }
   };
 
-  // ✅ ONLY CAMERA VALIDATION
+  // ✅ camera-only validation
   function validateCameraPhotos(files){
     for(const f of files){
       if(!f.type || !f.type.startsWith("image/")){
@@ -325,7 +320,7 @@
     }
   }
 
-  // ✅ Watermark helper
+  // ✅ watermark helper
   function formatDateTime(d){
     const pad = (n)=> String(n).padStart(2,"0");
     return `${pad(d.getDate())}-${pad(d.getMonth()+1)}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
@@ -348,28 +343,19 @@
     canvas.width = img.naturalWidth || img.width;
     canvas.height = img.naturalHeight || img.height;
 
-    // draw original
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-    // watermark text
     const now = new Date();
     const line1 = "SP VERIFIED PROPERTY INDIA";
     const line2 = `DATE: ${formatDateTime(now)}`;
     const line3 = gpsObj ? `GPS: ${gpsObj.lat.toFixed(6)}, ${gpsObj.lng.toFixed(6)}` : "GPS: NOT CAPTURED";
-    const line4 = `CITY: ${(cityEl.value || "").trim() || "N/A"}`;
-    const line5 = `MOBILE: ${(mobileEl.value || "").trim() || "N/A"}`;
-    const line6 = `PROPERTY ID: ${propertyId}`;
 
     const padding = Math.max(20, Math.floor(canvas.width * 0.02));
+    const boxH = Math.max(120, Math.floor(canvas.height * 0.10));
 
-    // ✅ increased box height for 6 lines
-    const boxH = Math.max(220, Math.floor(canvas.height * 0.18));
-
-    // black transparent box
     ctx.fillStyle = "rgba(0,0,0,0.55)";
     ctx.fillRect(0, canvas.height - boxH, canvas.width, boxH);
 
-    // text style
     const fontSize1 = Math.max(26, Math.floor(canvas.width * 0.035));
     const fontSize2 = Math.max(20, Math.floor(canvas.width * 0.028));
 
@@ -380,11 +366,8 @@
     ctx.fillText(line1, padding, canvas.height - boxH + padding + fontSize1);
 
     ctx.font = `bold ${fontSize2}px Arial`;
-    ctx.fillText(line2, padding, canvas.height - padding - (fontSize2 * 4.8));
-    ctx.fillText(line3, padding, canvas.height - padding - (fontSize2 * 3.6));
-    ctx.fillText(line4, padding, canvas.height - padding - (fontSize2 * 2.4));
-    ctx.fillText(line5, padding, canvas.height - padding - (fontSize2 * 1.2));
-    ctx.fillText(line6, padding, canvas.height - padding);
+    ctx.fillText(line2, padding, canvas.height - padding - (fontSize2 * 1.2));
+    ctx.fillText(line3, padding, canvas.height - padding);
 
     URL.revokeObjectURL(imgURL);
 
@@ -395,11 +378,10 @@
     return watermarkedBlob;
   }
 
-  // ✅ Photo preview
   photosEl.onchange = ()=>{
     thumbsEl.innerHTML = "";
-
     const files = Array.from(photosEl.files || []);
+
     if(files.length){
       try{
         validateCameraPhotos(files);
@@ -417,10 +399,9 @@
   };
 
   async function uploadOnePhotoWithWatermark(file){
-    // ✅ Add watermark before upload
     const wmBlob = await addWatermarkToImage(file, gps);
 
-    const path = `properties/${u.uid}/${propertyId}/${Date.now()}_${Math.random().toString(16).slice(2)}.jpg`;
+    const path = `properties/${u.uid}/${Date.now()}_${Math.random().toString(16).slice(2)}.jpg`;
     const r = ref(storage, path);
     await uploadBytes(r, wmBlob);
     return await getDownloadURL(r);
@@ -435,9 +416,6 @@
       if(ownerMonthlyLimit > 0 && ownerMonthlyUsed >= ownerMonthlyLimit){
         return alert(`🔒 Monthly Listing Limit Reached (${ownerMonthlyUsed}/${ownerMonthlyLimit}) ✅`);
       }
-
-      // ✅ NEW: fresh property id each submit
-      propertyId = "SPVPI-" + Date.now();
 
       const title = titleEl.value.trim();
       const type = typeEl.value;
@@ -480,10 +458,8 @@
       prog.value = 85;
 
       await addDoc(collection(db,"properties"), {
-        propertyId,
         uid: u.uid,
         email: u.email || "",
-
         title,
         type,
         city,
@@ -491,10 +467,8 @@
         ownerName,
         mobile,
         desc,
-
         gps,
         images: urls,
-
         status: "PENDING",
         createdAt: serverTimestamp()
       });

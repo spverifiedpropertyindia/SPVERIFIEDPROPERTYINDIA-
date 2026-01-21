@@ -36,16 +36,36 @@
     .warn{background:#fff7ed;border:1px solid #ffd8a8;padding:12px;border-radius:14px;margin-top:10px}
     .filebox{background:#fff;border:1px dashed #cbd5e1;border-radius:14px;padding:12px;margin-top:10px}
 
-    video, canvas, img{
-      width:100%;
-      border-radius:14px;
+    progress{width:100%;height:16px;margin-top:10px}
+
+    /* ✅ FULL CAMERA STYLE */
+    .camBox{
       margin-top:10px;
+      border-radius:14px;
+      overflow:hidden;
+      border:1px solid #eee;
       background:#000;
-      max-height:260px;
-      object-fit:cover;
+      position:relative;
+      height:320px;
     }
 
-    progress{width:100%;height:16px;margin-top:10px}
+    video{
+      width:100%;
+      height:320px;
+      object-fit:cover;
+      display:none;
+      background:#000;
+    }
+
+    img{
+      width:100%;
+      height:320px;
+      object-fit:cover;
+      display:none;
+      background:#000;
+    }
+
+    canvas{display:none;}
   </style>
 </head>
 
@@ -107,20 +127,22 @@
     </div>
 
     <div class="filebox">
-      <p class="title">📷 Live Photo (Camera)</p>
+      <p class="title">📷 Live Photo (FULL Camera)</p>
 
-      <!-- ✅ NEW: Front / Back Camera Switch -->
-      <button class="btn gray" id="frontCam">Front Camera ✅</button>
-      <button class="btn gray" id="backCam">Back Camera ✅</button>
+      <button class="btn gray" id="frontBtn">Front Camera ✅</button>
+      <button class="btn gray" id="backBtn">Back Camera ✅</button>
 
       <button class="btn orange" id="startCam">Start Camera ✅</button>
       <button class="btn green" id="captureBtn">Capture Photo ✅</button>
       <button class="btn red" id="stopCam">Stop Camera</button>
 
-      <video id="video" autoplay playsinline style="display:none;"></video>
-      <canvas id="canvas" style="display:none;"></canvas>
-      <img id="preview" style="display:none;" />
-      <div class="mini" id="camMsg"></div>
+      <div class="camBox">
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas"></canvas>
+        <img id="preview" />
+      </div>
+
+      <div class="mini" id="camMsg" style="margin-top:6px;"></div>
     </div>
 
     <button class="btn green" id="submitBtn">✅ Submit KYC (PRO)</button>
@@ -151,7 +173,6 @@
   const db = getFirestore(app);
   const storage = getStorage(app);
 
-  // ✅ elements
   const aadhaarEl = document.getElementById("aadhaar");
   const panEl = document.getElementById("pan");
   const voterEl = document.getElementById("voter");
@@ -169,8 +190,8 @@
   const prog = document.getElementById("prog");
   const upMsg = document.getElementById("upMsg");
 
-  const frontCamBtn = document.getElementById("frontCam");
-  const backCamBtn = document.getElementById("backCam");
+  const frontBtn = document.getElementById("frontBtn");
+  const backBtn = document.getElementById("backBtn");
 
   const startCamBtn = document.getElementById("startCam");
   const captureBtn = document.getElementById("captureBtn");
@@ -181,10 +202,9 @@
   const preview = document.getElementById("preview");
   const camMsg = document.getElementById("camMsg");
 
-  // ✅ login required (FIXED async)
-  const u = await VPI.requireLogin();
+  // ✅ login required
+  const u = VPI.requireLogin();
 
-  // ✅ validations
   function validAadhaar(a){ return /^[0-9]{12}$/.test((a||"").trim()); }
   function validPAN(p){ return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test((p||"").trim().toUpperCase()); }
 
@@ -201,52 +221,55 @@
     return await getDownloadURL(r);
   }
 
-  // ✅ Camera PRO FIX (Front + Back)
+  // ✅ FULL CAMERA CONTROL
   let camStream = null;
   let livePhotoBlob = null;
-  let camMode = "user"; // ✅ default front camera
+  let currentFacing = "user"; // ✅ default front
 
-  function stopCamera(){
-    if(camStream){
-      camStream.getTracks().forEach(t=>t.stop());
-      camStream = null;
-      video.style.display = "none";
-    }
+  function setFacing(mode){
+    currentFacing = mode;
+    camMsg.innerHTML = `✅ Selected: ${mode === "user" ? "Front Camera" : "Back Camera"}`;
   }
 
-  frontCamBtn.onclick = ()=>{
-    camMode = "user";
-    alert("✅ Front Camera selected");
-  };
+  frontBtn.onclick = ()=> setFacing("user");
+  backBtn.onclick = ()=> setFacing("environment");
 
-  backCamBtn.onclick = ()=>{
-    camMode = "environment";
-    alert("✅ Back Camera selected");
-  };
-
-  startCamBtn.onclick = async ()=>{
+  async function startCamera(){
     try{
       camMsg.innerHTML = "⏳ Starting camera...";
-      stopCamera();
+      livePhotoBlob = null;
+
+      // stop old stream
+      if(camStream){
+        camStream.getTracks().forEach(t=>t.stop());
+        camStream = null;
+      }
 
       camStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: camMode },
+        video: { facingMode: { ideal: currentFacing } },
         audio: false
       });
 
       video.srcObject = camStream;
       video.style.display = "block";
       preview.style.display = "none";
-      camMsg.innerHTML = "✅ Camera started";
+
+      camMsg.innerHTML = "✅ Camera started (FULL VIEW)";
     }catch(e){
       console.log(e);
       camMsg.innerHTML = "❌ Camera permission denied / not supported";
       alert("❌ Camera permission required");
     }
-  };
+  }
+
+  startCamBtn.onclick = startCamera;
 
   stopCamBtn.onclick = ()=>{
-    stopCamera();
+    if(camStream){
+      camStream.getTracks().forEach(t=>t.stop());
+      camStream = null;
+    }
+    video.style.display = "none";
     camMsg.innerHTML = "✅ Camera stopped";
   };
 
@@ -264,13 +287,15 @@
       ctx.drawImage(video, 0, 0, w, h);
 
       livePhotoBlob = await new Promise((resolve) => {
-        canvas.toBlob((b)=> resolve(b), "image/jpeg", 0.9);
+        canvas.toBlob((b)=> resolve(b), "image/jpeg", 0.92);
       });
 
       preview.src = URL.createObjectURL(livePhotoBlob);
       preview.style.display = "block";
-      camMsg.innerHTML = "✅ Photo captured";
-      alert("✅ Photo captured!");
+      video.style.display = "none";
+
+      camMsg.innerHTML = "✅ Live photo captured";
+      alert("✅ Live photo captured!");
     }catch(e){
       console.log(e);
       alert("❌ Capture failed");
@@ -288,7 +313,6 @@
       if(!validPAN(pan)) return alert("❌ PAN invalid (ABCDE1234F)");
       if(!voter) return alert("❌ Voter ID required");
 
-      // files
       const f1 = aadhaarFrontEl.files[0];
       const f2 = aadhaarBackEl.files[0];
       const f3 = panFileEl.files[0];
@@ -333,10 +357,8 @@
         pan,
         voter,
         note,
-
         status: "PENDING",
         createdAt: serverTimestamp(),
-
         docs: {
           aadhaarFrontURL,
           aadhaarBackURL,
