@@ -15,14 +15,14 @@ import {
   getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-console.log("✅ VPI PRO LOADED (POPUP FIX)");
+console.log("✅ VPI PRO LOADED (POPUP + ADMIN BYPASS)");
 
 const firebaseConfig = {
   apiKey: "AIzaSyDKyu_TDnbqE6yO9kx0pahFnxqL72q38ME",
   authDomain: "raazsahuteam-d02de.firebaseapp.com",
   projectId: "raazsahuteam-d02de",
 
-  // ✅ IMPORTANT FIX (Bucket must be appspot.com)
+  // ✅ Bucket must be appspot.com
   storageBucket: "raazsahuteam-d02de.appspot.com",
 
   messagingSenderId: "307824931465",
@@ -127,9 +127,13 @@ export const VPI = {
     return u;
   },
 
-  // ✅ PRO: KYC Approved required
+  // ✅ PRO: KYC Approved required (ADMIN BYPASS ✅)
   async requireKycApproved() {
     this.requireLogin();
+
+    // ✅ ADMIN FULL ACCESS
+    if (this.isAdmin()) return true;
+
     const profile = await getUserDoc();
     if (!profile || profile.kycStatus !== "APPROVED") {
       alert("❌ KYC not approved yet. Please complete KYC and wait for admin approval ✅");
@@ -139,9 +143,13 @@ export const VPI = {
     return true;
   },
 
-  // ✅ PRO: Plan Active + Not Expired required
+  // ✅ PRO: Plan Active + Not Expired required (ADMIN BYPASS ✅)
   async requireActivePlan() {
     this.requireLogin();
+
+    // ✅ ADMIN FULL ACCESS
+    if (this.isAdmin()) return true;
+
     const profile = await getUserDoc();
 
     if (!profile || profile.planStatus !== "ACTIVE") {
