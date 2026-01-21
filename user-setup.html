@@ -1,0 +1,177 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>User Setup (PRO) - SP Verified Property</title>
+
+  <style>
+    body{margin:0;font-family:Arial;background:#f6f7fb}
+    header{background:#0b1b3a;color:#fff;padding:16px}
+    .wrap{max-width:800px;margin:auto;padding:16px}
+    .card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 10px 24px rgba(0,0,0,.08);margin-top:12px}
+    .btn{
+      display:block;padding:12px;border-radius:12px;background:#0b1b3a;color:#fff;
+      text-decoration:none;font-weight:900;margin-top:10px;text-align:center;border:none;width:100%;cursor:pointer
+    }
+    .btn.green{background:#22c55e}
+    .btn.gray{background:#64748b}
+    .mini{font-size:12px;color:#666}
+    .title{font-size:16px;font-weight:900;color:#0b1b3a;margin:0 0 6px}
+    input, select, textarea{
+      width:100%;padding:12px;border-radius:12px;border:1px solid #ddd;outline:none;margin-top:8px;
+      font-size:14px;box-sizing:border-box
+    }
+    textarea{min-height:90px;resize:vertical}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .col{flex:1;min-width:220px}
+    .note{background:#f1f3ff;border:1px solid #dfe3ff;padding:12px;border-radius:14px;margin-top:10px}
+  </style>
+</head>
+
+<body>
+<header><b>User Setup ✅ (PRO)</b></header>
+
+<div class="wrap">
+
+  <div class="card">
+    <a class="btn gray" href="index.html">⬅ Back Dashboard</a>
+
+    <p class="title" style="margin-top:12px;">👤 User Profile Setup</p>
+    <div class="mini">Form fill karna compulsory ✅</div>
+
+    <div class="row" style="margin-top:12px;">
+      <div class="col">
+        <label class="mini">Full Name</label>
+        <input id="name" placeholder="Enter full name" />
+      </div>
+
+      <div class="col">
+        <label class="mini">Mobile Number</label>
+        <input id="mobile" placeholder="Enter mobile number" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col">
+        <label class="mini">User Type</label>
+        <select id="userType">
+          <option value="OWNER">Owner</option>
+          <option value="BROKER">Broker</option>
+          <option value="AGENT">Agent</option>
+          <option value="BUYER">Buyer</option>
+        </select>
+      </div>
+
+      <div class="col">
+        <label class="mini">City</label>
+        <input id="city" placeholder="Enter city" />
+      </div>
+    </div>
+
+    <label class="mini">Address (Optional)</label>
+    <textarea id="address" placeholder="Enter address"></textarea>
+
+    <button class="btn green" id="saveBtn">✅ Save User Setup</button>
+
+    <div id="msg" class="mini" style="margin-top:12px;"></div>
+
+    <div class="note mini">
+      ✅ Save ke baad KYC submit kar sakte ho ✅
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+  import { VPI } from "./vpi.js?v=2";
+
+  import { getFirestore, doc, setDoc, getDoc, serverTimestamp }
+    from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+  import { getApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+
+  const db = getFirestore(getApp());
+
+  const nameEl = document.getElementById("name");
+  const mobileEl = document.getElementById("mobile");
+  const userTypeEl = document.getElementById("userType");
+  const cityEl = document.getElementById("city");
+  const addressEl = document.getElementById("address");
+  const saveBtn = document.getElementById("saveBtn");
+  const msg = document.getElementById("msg");
+
+  const u = VPI.requireLogin();
+
+  async function loadProfile(){
+    msg.innerHTML = "⏳ Loading profile...";
+    try{
+      const snap = await getDoc(doc(db,"users", u.uid));
+      if(snap.exists()){
+        const data = snap.data();
+        nameEl.value = data.name || "";
+        mobileEl.value = data.mobile || "";
+        userTypeEl.value = data.userType || "OWNER";
+        cityEl.value = data.city || "";
+        addressEl.value = data.address || "";
+        msg.innerHTML = "✅ Existing profile loaded";
+      }else{
+        msg.innerHTML = "ℹ️ New user setup required";
+      }
+    }catch(e){
+      console.log(e);
+      msg.innerHTML = "❌ Error loading profile";
+    }
+  }
+
+  function validMobile(m){
+    const x = (m || "").replace(/\s+/g,"");
+    return /^[6-9]\d{9}$/.test(x);
+  }
+
+  saveBtn.onclick = async ()=>{
+    try{
+      const name = nameEl.value.trim();
+      const mobile = mobileEl.value.trim();
+      const userType = userTypeEl.value;
+      const city = cityEl.value.trim();
+      const address = addressEl.value.trim();
+
+      if(!name) return alert("❌ Full name required");
+      if(!validMobile(mobile)) return alert("❌ Valid 10 digit mobile required");
+      if(!city) return alert("❌ City required");
+
+      msg.innerHTML = "⏳ Saving...";
+
+      await setDoc(doc(db,"users", u.uid), {
+        uid: u.uid,
+        email: u.email || "",
+        name,
+        mobile,
+        userType,
+        city,
+        address,
+
+        // defaults
+        kycStatus: "PENDING",
+        planStatus: "PENDING",
+
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      msg.innerHTML = "✅ User setup saved successfully";
+      alert("✅ User setup saved!");
+      location.href = "kyc.html";
+
+    }catch(e){
+      console.log(e);
+      msg.innerHTML = "❌ Save error: " + (e?.message || e);
+      alert("❌ Save failed");
+    }
+  };
+
+  loadProfile();
+</script>
+
+</body>
+</html>

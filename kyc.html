@@ -1,0 +1,347 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>KYC Submit (PRO) - SP Verified Property</title>
+
+  <style>
+    body{margin:0;font-family:Arial;background:#f6f7fb}
+    header{background:#0b1b3a;color:#fff;padding:16px}
+    .wrap{max-width:950px;margin:auto;padding:16px}
+    .card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 10px 24px rgba(0,0,0,.08);margin-top:12px}
+
+    .btn{
+      display:block;padding:12px;border-radius:12px;background:#0b1b3a;color:#fff;
+      text-decoration:none;font-weight:900;margin-top:10px;text-align:center;border:none;width:100%;cursor:pointer
+    }
+    .btn.green{background:#22c55e}
+    .btn.gray{background:#64748b}
+    .btn.orange{background:#ff7a00}
+    .btn.red{background:#ff3b3b}
+
+    .mini{font-size:12px;color:#666}
+    .title{font-size:16px;font-weight:900;color:#0b1b3a;margin:0 0 6px}
+
+    input, textarea{
+      width:100%;padding:12px;border-radius:12px;border:1px solid #ddd;outline:none;margin-top:8px;
+      font-size:14px;box-sizing:border-box
+    }
+    textarea{min-height:70px;resize:vertical}
+
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .col{flex:1;min-width:240px}
+
+    .note{background:#f1f3ff;border:1px solid #dfe3ff;padding:12px;border-radius:14px;margin-top:10px}
+    .warn{background:#fff7ed;border:1px solid #ffd8a8;padding:12px;border-radius:14px;margin-top:10px}
+    .filebox{background:#fff;border:1px dashed #cbd5e1;border-radius:14px;padding:12px;margin-top:10px}
+
+    video, canvas, img{
+      width:100%;
+      border-radius:14px;
+      margin-top:10px;
+      background:#000;
+      max-height:260px;
+      object-fit:cover;
+    }
+
+    progress{width:100%;height:16px;margin-top:10px}
+  </style>
+</head>
+
+<body>
+<header><b>KYC Submit ✅ (PRO)</b></header>
+
+<div class="wrap">
+
+  <div class="card">
+    <a class="btn gray" href="index.html">⬅ Back Dashboard</a>
+
+    <p class="title" style="margin-top:12px;">📄 KYC Form + Documents Upload</p>
+    <div class="mini">Aadhaar/PAN/Voter + Live Photo compulsory ✅</div>
+
+    <div class="warn mini" style="margin-top:12px;">
+      ✅ Documents Firebase Storage me safe rahenge.<br/>
+      ✅ Admin verify karke approve/reject karega.
+    </div>
+
+    <div class="row" style="margin-top:12px;">
+      <div class="col">
+        <label class="mini">Aadhaar Number</label>
+        <input id="aadhaar" placeholder="Enter 12 digit Aadhaar" />
+      </div>
+
+      <div class="col">
+        <label class="mini">PAN Number</label>
+        <input id="pan" placeholder="ABCDE1234F" />
+      </div>
+    </div>
+
+    <label class="mini">Voter ID Number</label>
+    <input id="voter" placeholder="Enter Voter ID" />
+
+    <label class="mini">KYC Notes (Optional)</label>
+    <textarea id="note" placeholder="Any note..."></textarea>
+
+    <div class="filebox">
+      <p class="title">✅ Upload Documents</p>
+      <div class="mini">Allowed: JPG/PNG/PDF ✅</div>
+
+      <label class="mini">Aadhaar Front *</label>
+      <input type="file" id="aadhaarFront" accept="image/*,.pdf" />
+
+      <label class="mini">Aadhaar Back *</label>
+      <input type="file" id="aadhaarBack" accept="image/*,.pdf" />
+
+      <label class="mini">PAN Card *</label>
+      <input type="file" id="panFile" accept="image/*,.pdf" />
+
+      <label class="mini">Voter ID Front *</label>
+      <input type="file" id="voterFront" accept="image/*,.pdf" />
+
+      <label class="mini">Voter ID Back *</label>
+      <input type="file" id="voterBack" accept="image/*,.pdf" />
+
+      <progress id="prog" value="0" max="100"></progress>
+      <div id="upMsg" class="mini"></div>
+    </div>
+
+    <div class="filebox">
+      <p class="title">📷 Live Photo (Camera)</p>
+
+      <button class="btn orange" id="startCam">Start Camera ✅</button>
+      <button class="btn green" id="captureBtn">Capture Photo ✅</button>
+      <button class="btn red" id="stopCam">Stop Camera</button>
+
+      <video id="video" autoplay playsinline style="display:none;"></video>
+      <canvas id="canvas" style="display:none;"></canvas>
+      <img id="preview" style="display:none;" />
+      <div class="mini" id="camMsg"></div>
+    </div>
+
+    <button class="btn green" id="submitBtn">✅ Submit KYC (PRO)</button>
+    <div id="msg" class="mini" style="margin-top:12px;"></div>
+
+    <div class="note mini">
+      ✅ Submit ke baad status <b>PENDING</b> रहेगा.<br/>
+      Admin approve karega tab KYC Verified hoga ✅
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+  import { VPI } from "./vpi.js?v=2";
+
+  import {
+    getFirestore, doc, setDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+  import {
+    getStorage, ref, uploadBytes, getDownloadURL
+  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
+
+  import { getApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+
+  const app = getApp();
+  const db = getFirestore(app);
+  const storage = getStorage(app);
+
+  // ✅ elements
+  const aadhaarEl = document.getElementById("aadhaar");
+  const panEl = document.getElementById("pan");
+  const voterEl = document.getElementById("voter");
+  const noteEl = document.getElementById("note");
+
+  const aadhaarFrontEl = document.getElementById("aadhaarFront");
+  const aadhaarBackEl  = document.getElementById("aadhaarBack");
+  const panFileEl      = document.getElementById("panFile");
+  const voterFrontEl   = document.getElementById("voterFront");
+  const voterBackEl    = document.getElementById("voterBack");
+
+  const submitBtn = document.getElementById("submitBtn");
+  const msg = document.getElementById("msg");
+
+  const prog = document.getElementById("prog");
+  const upMsg = document.getElementById("upMsg");
+
+  const startCamBtn = document.getElementById("startCam");
+  const captureBtn = document.getElementById("captureBtn");
+  const stopCamBtn = document.getElementById("stopCam");
+  const video = document.getElementById("video");
+  const canvas = document.getElementById("canvas");
+  const preview = document.getElementById("preview");
+  const camMsg = document.getElementById("camMsg");
+
+  // ✅ login required
+  const u = VPI.requireLogin();
+
+  // ✅ validations
+  function validAadhaar(a){ return /^[0-9]{12}$/.test((a||"").trim()); }
+  function validPAN(p){ return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test((p||"").trim().toUpperCase()); }
+
+  function fileExt(file){
+    const n = (file?.name || "").toLowerCase();
+    if(n.endsWith(".pdf")) return "pdf";
+    if(n.endsWith(".png")) return "png";
+    return "jpg";
+  }
+
+  async function uploadFile(fileOrBlob, path){
+    const r = ref(storage, path);
+    await uploadBytes(r, fileOrBlob);
+    return await getDownloadURL(r);
+  }
+
+  // ✅ Camera
+  let camStream = null;
+  let livePhotoBlob = null;
+
+  startCamBtn.onclick = async ()=>{
+    try{
+      camMsg.innerHTML = "⏳ Starting camera...";
+      camStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+        audio: false
+      });
+
+      video.srcObject = camStream;
+      video.style.display = "block";
+      preview.style.display = "none";
+      camMsg.innerHTML = "✅ Camera started";
+    }catch(e){
+      console.log(e);
+      camMsg.innerHTML = "❌ Camera permission denied";
+      alert("❌ Camera permission required");
+    }
+  };
+
+  stopCamBtn.onclick = ()=>{
+    if(camStream){
+      camStream.getTracks().forEach(t=>t.stop());
+      camStream = null;
+      video.style.display = "none";
+      camMsg.innerHTML = "✅ Camera stopped";
+    }
+  };
+
+  captureBtn.onclick = async ()=>{
+    try{
+      if(!camStream) return alert("❌ Start camera first");
+
+      const w = video.videoWidth || 720;
+      const h = video.videoHeight || 540;
+
+      canvas.width = w;
+      canvas.height = h;
+
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, w, h);
+
+      livePhotoBlob = await new Promise((resolve) => {
+        canvas.toBlob((b)=> resolve(b), "image/jpeg", 0.9);
+      });
+
+      preview.src = URL.createObjectURL(livePhotoBlob);
+      preview.style.display = "block";
+      camMsg.innerHTML = "✅ Live photo captured";
+      alert("✅ Live photo captured!");
+    }catch(e){
+      console.log(e);
+      alert("❌ Capture failed");
+    }
+  };
+
+  submitBtn.onclick = async ()=>{
+    try{
+      const aadhaar = aadhaarEl.value.trim();
+      const pan = panEl.value.trim().toUpperCase();
+      const voter = voterEl.value.trim();
+      const note = noteEl.value.trim();
+
+      if(!validAadhaar(aadhaar)) return alert("❌ Aadhaar must be 12 digits");
+      if(!validPAN(pan)) return alert("❌ PAN invalid (ABCDE1234F)");
+      if(!voter) return alert("❌ Voter ID required");
+
+      // files
+      const f1 = aadhaarFrontEl.files[0];
+      const f2 = aadhaarBackEl.files[0];
+      const f3 = panFileEl.files[0];
+      const f4 = voterFrontEl.files[0];
+      const f5 = voterBackEl.files[0];
+
+      if(!f1 || !f2 || !f3 || !f4 || !f5) return alert("❌ Please upload all documents");
+      if(!livePhotoBlob) return alert("❌ Live photo capture compulsory");
+
+      msg.innerHTML = "⏳ Uploading documents...";
+      upMsg.innerHTML = "Uploading...";
+      prog.value = 5;
+      submitBtn.disabled = true;
+
+      const base = `kyc/${u.uid}/${Date.now()}`;
+
+      prog.value = 10;
+      const aadhaarFrontURL = await uploadFile(f1, `${base}/aadhaar_front.${fileExt(f1)}`);
+      prog.value = 25;
+
+      const aadhaarBackURL  = await uploadFile(f2, `${base}/aadhaar_back.${fileExt(f2)}`);
+      prog.value = 40;
+
+      const panURL = await uploadFile(f3, `${base}/pan.${fileExt(f3)}`);
+      prog.value = 55;
+
+      const voterFrontURL = await uploadFile(f4, `${base}/voter_front.${fileExt(f4)}`);
+      prog.value = 70;
+
+      const voterBackURL = await uploadFile(f5, `${base}/voter_back.${fileExt(f5)}`);
+      prog.value = 85;
+
+      const livePhotoURL = await uploadFile(livePhotoBlob, `${base}/live_photo.jpg`);
+      prog.value = 95;
+
+      msg.innerHTML = "⏳ Saving KYC record...";
+
+      await setDoc(doc(db, "kyc", u.uid), {
+        uid: u.uid,
+        email: u.email || "",
+        aadhaar,
+        pan,
+        voter,
+        note,
+
+        status: "PENDING",
+        createdAt: serverTimestamp(),
+
+        docs: {
+          aadhaarFrontURL,
+          aadhaarBackURL,
+          panURL,
+          voterFrontURL,
+          voterBackURL,
+          livePhotoURL
+        }
+      }, { merge: true });
+
+      await setDoc(doc(db, "users", u.uid), {
+        kycStatus: "PENDING",
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      prog.value = 100;
+      upMsg.innerHTML = "✅ Upload complete";
+      msg.innerHTML = "✅ KYC Submitted Successfully (Pending Approval)";
+      alert("✅ KYC submitted! Admin approval pending.");
+      location.href = "index.html";
+
+    }catch(e){
+      console.log(e);
+      msg.innerHTML = "❌ Error: " + (e?.message || e);
+      alert("❌ KYC submit failed");
+    }finally{
+      submitBtn.disabled = false;
+    }
+  };
+</script>
+
+</body>
+</html>

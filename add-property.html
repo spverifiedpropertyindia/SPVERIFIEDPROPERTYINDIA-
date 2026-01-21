@@ -1,0 +1,314 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Add Property (PRO) - SP Verified Property</title>
+
+  <style>
+    body{margin:0;font-family:Arial;background:#f6f7fb}
+    header{background:#0b1b3a;color:#fff;padding:16px}
+    .wrap{max-width:950px;margin:auto;padding:16px}
+    .card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 10px 24px rgba(0,0,0,.08);margin-top:12px}
+
+    .btn{
+      display:block;padding:12px;border-radius:12px;background:#0b1b3a;color:#fff;
+      text-decoration:none;font-weight:900;margin-top:10px;text-align:center;border:none;width:100%;cursor:pointer
+    }
+    .btn.green{background:#22c55e}
+    .btn.gray{background:#64748b}
+    .btn.orange{background:#ff7a00}
+
+    .mini{font-size:12px;color:#666}
+    .title{font-size:16px;font-weight:900;color:#0b1b3a;margin:0 0 6px}
+
+    input, select, textarea{
+      width:100%;padding:12px;border-radius:12px;border:1px solid #ddd;outline:none;margin-top:8px;
+      font-size:14px;box-sizing:border-box
+    }
+    textarea{min-height:90px;resize:vertical}
+
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .col{flex:1;min-width:240px}
+
+    .note{background:#f1f3ff;border:1px solid #dfe3ff;padding:12px;border-radius:14px;margin-top:10px}
+    .warn{background:#fff7ed;border:1px solid #ffd8a8;padding:12px;border-radius:14px;margin-top:10px}
+    .filebox{background:#fff;border:1px dashed #cbd5e1;border-radius:14px;padding:12px;margin-top:10px}
+
+    .thumbs{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+      gap:8px;
+      margin-top:10px;
+    }
+    .thumbs img{
+      width:100%;
+      height:100px;
+      object-fit:cover;
+      border-radius:12px;
+      background:#f2f2f2;
+      border:1px solid #eee;
+    }
+
+    progress{width:100%;height:16px;margin-top:10px}
+  </style>
+</head>
+
+<body>
+<header><b>Add Property ✅ (PRO)</b></header>
+
+<div class="wrap">
+
+  <div class="card">
+    <a class="btn gray" href="index.html">⬅ Back Dashboard</a>
+
+    <p class="title" style="margin-top:12px;">🏠 Property Add (PRO)</p>
+    <div class="mini">KYC Approved + Active Plan required ✅</div>
+
+    <div class="warn mini" style="margin-top:12px;">
+      ✅ Minimum <b>3 photos</b> compulsory ✅<br/>
+      ✅ GPS Location capture compulsory ✅<br/>
+      ✅ Admin approval ke baad property public listing me show hogi ✅
+    </div>
+
+    <div class="row" style="margin-top:12px;">
+      <div class="col">
+        <label class="mini">Property Title</label>
+        <input id="title" placeholder="Ex: 2BHK Flat Near Highway" />
+      </div>
+
+      <div class="col">
+        <label class="mini">Property Type</label>
+        <select id="type">
+          <option value="FLAT">Flat</option>
+          <option value="HOUSE">House</option>
+          <option value="PLOT">Plot</option>
+          <option value="SHOP">Shop</option>
+          <option value="OFFICE">Office</option>
+          <option value="FARM">Farm</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col">
+        <label class="mini">City</label>
+        <input id="city" placeholder="Enter city" />
+      </div>
+
+      <div class="col">
+        <label class="mini">Expected Price (₹)</label>
+        <input id="price" placeholder="Ex: 2500000" />
+      </div>
+    </div>
+
+    <label class="mini">Full Address</label>
+    <textarea id="address" placeholder="Enter complete address"></textarea>
+
+    <label class="mini">Description (Optional)</label>
+    <textarea id="desc" placeholder="Property details..."></textarea>
+
+    <div class="filebox">
+      <p class="title">📸 Upload Property Photos (Min 3)</p>
+      <input type="file" id="photos" accept="image/*" multiple />
+      <div class="mini">✅ Upload at least 3 photos</div>
+
+      <div id="thumbs" class="thumbs"></div>
+
+      <progress id="prog" value="0" max="100"></progress>
+      <div id="upMsg" class="mini"></div>
+    </div>
+
+    <div class="filebox">
+      <p class="title">📍 GPS Location</p>
+      <button class="btn orange" id="gpsBtn">Capture GPS Location ✅</button>
+
+      <div class="mini" id="gpsMsg" style="margin-top:10px;">Not Captured</div>
+    </div>
+
+    <button class="btn green" id="submitBtn">✅ Submit Property (PRO)</button>
+    <div id="msg" class="mini" style="margin-top:12px;"></div>
+
+    <div class="note mini">
+      ✅ Submit ke baad status <b>PENDING</b> रहेगा.<br/>
+      Admin approve karega tab public me show hogi ✅
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+  import { VPI } from "./vpi.js?v=2";
+
+  import {
+    getFirestore, collection, addDoc, serverTimestamp, doc, getDoc
+  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+  import {
+    getStorage, ref, uploadBytes, getDownloadURL
+  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
+
+  import { getApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+
+  const app = getApp();
+  const db = getFirestore(app);
+  const storage = getStorage(app);
+
+  const titleEl = document.getElementById("title");
+  const typeEl = document.getElementById("type");
+  const cityEl = document.getElementById("city");
+  const priceEl = document.getElementById("price");
+  const addressEl = document.getElementById("address");
+  const descEl = document.getElementById("desc");
+
+  const photosEl = document.getElementById("photos");
+  const thumbs = document.getElementById("thumbs");
+
+  const prog = document.getElementById("prog");
+  const upMsg = document.getElementById("upMsg");
+
+  const gpsBtn = document.getElementById("gpsBtn");
+  const gpsMsg = document.getElementById("gpsMsg");
+
+  const submitBtn = document.getElementById("submitBtn");
+  const msg = document.getElementById("msg");
+
+  // ✅ PRO PROTECT
+  const u = VPI.requireLogin();
+  await VPI.requireKycApproved();
+  await VPI.requireActivePlan();
+
+  // ✅ fetch user details
+  async function getUserInfo(){
+    try{
+      const snap = await getDoc(doc(db, "users", u.uid));
+      return snap.exists() ? snap.data() : {};
+    }catch(e){
+      return {};
+    }
+  }
+
+  function isNumber(x){
+    return /^[0-9]+$/.test((x || "").trim());
+  }
+
+  // ✅ preview photos
+  photosEl.onchange = ()=>{
+    thumbs.innerHTML = "";
+    const files = [...photosEl.files];
+    files.forEach(f=>{
+      const img = document.createElement("img");
+      img.src = URL.createObjectURL(f);
+      thumbs.appendChild(img);
+    });
+  };
+
+  // ✅ GPS capture
+  let gps = null;
+  gpsBtn.onclick = async ()=>{
+    try{
+      gpsMsg.innerHTML = "⏳ Capturing GPS...";
+      navigator.geolocation.getCurrentPosition(
+        (pos)=>{
+          gps = {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            accuracy: pos.coords.accuracy
+          };
+          gpsMsg.innerHTML = `✅ GPS Captured: Lat ${gps.lat}, Lng ${gps.lng} (Accuracy ${gps.accuracy}m)`;
+        },
+        (err)=>{
+          console.log(err);
+          gpsMsg.innerHTML = "❌ GPS permission denied / error";
+          alert("❌ GPS permission required");
+        },
+        { enableHighAccuracy:true, timeout:15000 }
+      );
+    }catch(e){
+      alert("❌ GPS not supported");
+    }
+  };
+
+  async function uploadPhoto(file, path){
+    const r = ref(storage, path);
+    await uploadBytes(r, file);
+    return await getDownloadURL(r);
+  }
+
+  submitBtn.onclick = async ()=>{
+    try{
+      const title = titleEl.value.trim();
+      const type = typeEl.value;
+      const city = cityEl.value.trim();
+      const price = priceEl.value.trim();
+      const address = addressEl.value.trim();
+      const desc = descEl.value.trim();
+
+      const files = [...photosEl.files];
+
+      if(!title) return alert("❌ Property title required");
+      if(!city) return alert("❌ City required");
+      if(price && !isNumber(price)) return alert("❌ Price only number होना चाहिए");
+      if(files.length < 3) return alert("❌ Minimum 3 photos upload compulsory");
+      if(!gps) return alert("❌ GPS location capture compulsory");
+
+      msg.innerHTML = "⏳ Uploading photos...";
+      upMsg.innerHTML = "Uploading...";
+      prog.value = 5;
+      submitBtn.disabled = true;
+
+      const base = `properties/${u.uid}/${Date.now()}`;
+      const urls = [];
+
+      // upload all photos
+      for(let i=0;i<files.length;i++){
+        const f = files[i];
+        prog.value = Math.floor(5 + ((i / files.length) * 80));
+        const url = await uploadPhoto(f, `${base}/photo_${i+1}.jpg`);
+        urls.push(url);
+      }
+
+      prog.value = 90;
+
+      const userInfo = await getUserInfo();
+
+      msg.innerHTML = "⏳ Saving property...";
+      await addDoc(collection(db, "properties"), {
+        uid: u.uid,
+        email: u.email || "",
+
+        ownerName: userInfo.name || "",
+        mobile: userInfo.mobile || "",
+
+        title,
+        type,
+        city,
+        price,
+        address,
+        desc,
+
+        images: urls,
+        gps,
+
+        status: "PENDING",
+        createdAt: serverTimestamp(),
+      });
+
+      prog.value = 100;
+      upMsg.innerHTML = "✅ Upload complete";
+      msg.innerHTML = "✅ Property submitted (Pending Approval)";
+      alert("✅ Property submitted! Admin approval pending.");
+      location.href = "index.html";
+
+    }catch(e){
+      console.log(e);
+      msg.innerHTML = "❌ Error: " + (e?.message || e);
+      alert("❌ Property submit failed");
+    }finally{
+      submitBtn.disabled = false;
+    }
+  };
+</script>
+
+</body>
+</html>

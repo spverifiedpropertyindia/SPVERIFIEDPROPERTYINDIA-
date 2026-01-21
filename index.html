@@ -1,0 +1,226 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+
+  <!-- ✅ FORCE CORRECT DOMAIN -->
+  <script>
+    if (location.hostname === "pverifiedpropertyindia.github.io") {
+      location.replace("https://spverifiedpropertyindia.github.io/SPVERIFIEDPROPERTYINDIA-/");
+    }
+  </script>
+
+  <title>SP Verified Property - Dashboard (PRO)</title>
+
+  <style>
+    body{margin:0;font-family:Arial;background:#f6f7fb}
+    header{background:#0b1b3a;color:#fff;padding:16px}
+    .wrap{max-width:950px;margin:auto;padding:16px}
+
+    .card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 10px 24px rgba(0,0,0,.08);margin-top:12px}
+    a.btn,button.btn{
+      display:block;padding:12px;border-radius:12px;background:#0b1b3a;color:#fff;
+      text-decoration:none;font-weight:900;margin-top:10px;text-align:center;border:none;width:100%;cursor:pointer
+    }
+    .btn.red{background:#ff3b3b}
+    .btn.green{background:#22c55e}
+    .btn.orange{background:#ff7a00}
+    .btn.gray{background:#64748b}
+
+    .mini{font-size:12px;color:#666}
+    .title{font-size:16px;font-weight:900;color:#0b1b3a;margin:0 0 6px}
+
+    .box{background:#f1f3ff;border:1px solid #dfe3ff;padding:12px;border-radius:14px;margin-top:10px}
+
+    ul{margin:8px 0 0 18px;padding:0}
+    li{margin:6px 0}
+
+    .badge{padding:4px 10px;border-radius:999px;font-size:12px;font-weight:900;display:inline-block}
+    .b2{background:#dcfce7;color:#166534}
+    .b3{background:#fee2e2;color:#991b1b}
+    .b4{background:#fef9c3;color:#854d0e}
+
+    .supportBox{background:#fff7ed;border:1px solid #ffd8a8;padding:12px;border-radius:14px;margin-top:12px}
+  </style>
+</head>
+
+<body>
+<header><b>Dashboard ✅ (PRO)</b></header>
+
+<div class="wrap">
+
+  <div class="card">
+    <div class="mini" id="status">Loading...</div>
+
+    <div class="box">
+      <p class="title">✅ Account Status</p>
+      <div class="mini" id="kycLine">KYC: ...</div>
+      <div class="mini" id="planLine">Plan: ...</div>
+      <div class="mini" id="expLine">Expiry: ...</div>
+      <div class="mini" id="lockMsg" style="margin-top:8px;font-weight:900;"></div>
+    </div>
+
+    <a class="btn gray" href="user-setup.html">User Setup</a>
+    <a class="btn orange" href="kyc.html">KYC Submit (PRO)</a>
+    <a class="btn orange" href="plans.html">Plans</a>
+    <a class="btn orange" href="payment.html">Upload Payment Proof (PRO)</a>
+
+    <a class="btn green" href="add-property.html" id="addPropBtn">Add Property (PRO)</a>
+    <a class="btn" href="listings.html">Public Listings</a>
+
+    <a class="btn" href="admin.html" id="adminBtn" style="display:none;">Admin Panel ✅</a>
+
+    <button class="btn red" id="logoutBtn">Logout</button>
+  </div>
+
+  <div class="card">
+    <p class="title">✅ Website Full Process (PRO)</p>
+    <div class="box">
+      <ul class="mini">
+        <li><b>Step 1:</b> Google Login ✅</li>
+        <li><b>Step 2:</b> User Setup ✅</li>
+        <li><b>Step 3:</b> KYC Upload + Live Photo ✅</li>
+        <li><b>Step 4:</b> Plan Select ✅</li>
+        <li><b>Step 5:</b> Payment Screenshot Upload ✅</li>
+        <li><b>Step 6:</b> Plan Activation by Admin ✅</li>
+        <li><b>Step 7:</b> Add Property (Min 3 Photos + GPS) ✅</li>
+        <li><b>Step 8:</b> Admin Property Approval ✅</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="title">✅ Support / Contact</p>
+    <div class="supportBox mini">
+      📞 Mobile: <b>8305070599</b><br/>
+      📧 Email: <b>spverifiedproperty@gmail.com</b><br/>
+      🕙 Working Time: <b>10 AM - 4 PM</b>
+
+      <a class="btn green" href="https://wa.me/918305070599" target="_blank">WhatsApp Support ✅</a>
+      <a class="btn orange" href="tel:8305070599">Call Now ✅</a>
+      <a class="btn" href="mailto:spverifiedproperty@gmail.com">Email Support ✅</a>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+  import { VPI } from "./vpi.js?v=2";
+
+  import { getFirestore, doc, getDoc }
+    from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+  import { getApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+
+  const db = getFirestore(getApp());
+
+  const status = document.getElementById("status");
+  const kycLine = document.getElementById("kycLine");
+  const planLine = document.getElementById("planLine");
+  const expLine = document.getElementById("expLine");
+  const lockMsg = document.getElementById("lockMsg");
+
+  const addPropBtn = document.getElementById("addPropBtn");
+  const adminBtn = document.getElementById("adminBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+
+  function badge(s){
+    const x = (s||"PENDING").toUpperCase();
+    if(x==="APPROVED") return `<span class="badge b2">APPROVED</span>`;
+    if(x==="ACTIVE") return `<span class="badge b2">ACTIVE</span>`;
+    if(x==="REJECTED") return `<span class="badge b3">REJECTED</span>`;
+    return `<span class="badge b4">${x}</span>`;
+  }
+
+  function toDateSafe(ts){
+    if(!ts) return null;
+    if(ts.toDate) return ts.toDate();
+    return new Date(ts);
+  }
+
+  async function refresh(){
+    const u = VPI.currentUser();
+
+    if(!u){
+      status.innerHTML = `❌ Not logged in. <a href="user-login.html">Login</a>`;
+      return;
+    }
+
+    status.innerHTML = `✅ Logged in: <b>${u.email}</b> ${VPI.isAdmin() ? "(ADMIN ✅)" : ""}`;
+
+    adminBtn.style.display = VPI.isAdmin() ? "block" : "none";
+
+    try{
+      const snap = await getDoc(doc(db,"users", u.uid));
+      if(!snap.exists()){
+        kycLine.innerHTML = `KYC: ${badge("PENDING")}`;
+        planLine.innerHTML = `Plan: ${badge("PENDING")}`;
+        expLine.innerHTML = `Expiry: -`;
+        lockMsg.innerHTML = "⚠️ Please complete User Setup first ✅";
+        addPropBtn.style.pointerEvents = "none";
+        addPropBtn.style.opacity = "0.5";
+        return;
+      }
+
+      const data = snap.data();
+
+      const kycStatus = data.kycStatus || "PENDING";
+      const planStatus = data.planStatus || "PENDING";
+      const planSelected = data.planSelected || "-";
+
+      kycLine.innerHTML = `KYC: ${badge(kycStatus)}`;
+      planLine.innerHTML = `Plan: <b>${planSelected}</b> ${badge(planStatus)}`;
+
+      const expiresAt = toDateSafe(data.planExpiresAt);
+      if(expiresAt){
+        const now = new Date();
+        const diffMs = expiresAt.getTime() - now.getTime();
+        const daysLeft = Math.ceil(diffMs / (1000*60*60*24));
+
+        if(daysLeft <= 0){
+          expLine.innerHTML = `Expiry: <b>Expired</b>`;
+        }else{
+          expLine.innerHTML = `Expiry: <b>${daysLeft} days left</b>`;
+        }
+      }else{
+        expLine.innerHTML = `Expiry: -`;
+      }
+
+      // ✅ LOCK LOGIC FOR ADD PROPERTY
+      let lockText = "";
+
+      // KYC must be approved
+      if(kycStatus !== "APPROVED"){
+        lockText = "🔒 Property Add Locked: KYC approval pending ✅";
+      } else if(planStatus !== "ACTIVE"){
+        lockText = "🔒 Property Add Locked: Plan not active ✅";
+      } else if(expiresAt && expiresAt.getTime() < new Date().getTime()){
+        lockText = "🔒 Property Add Locked: Plan expired ✅";
+      } else {
+        lockText = "✅ All Verified! You can add property ✅";
+      }
+
+      lockMsg.innerHTML = lockText;
+
+      const unlocked = (kycStatus==="APPROVED" && planStatus==="ACTIVE" && (!expiresAt || expiresAt.getTime() > new Date().getTime()));
+
+      addPropBtn.style.pointerEvents = unlocked ? "auto" : "none";
+      addPropBtn.style.opacity = unlocked ? "1" : "0.5";
+
+    }catch(e){
+      console.log(e);
+      lockMsg.innerHTML = "❌ Error loading status";
+    }
+  }
+
+  logoutBtn.onclick = async ()=>{
+    await VPI.logout();
+    location.href = "user-login.html";
+  };
+
+  setInterval(refresh, 1000);
+  refresh();
+</script>
+
+</body>
+</html>

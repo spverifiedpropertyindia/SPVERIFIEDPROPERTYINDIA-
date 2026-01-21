@@ -1,0 +1,196 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Public Listings (PRO) - SP Verified Property</title>
+
+  <style>
+    body{margin:0;font-family:Arial;background:#f6f7fb}
+    header{background:#0b1b3a;color:#fff;padding:16px}
+    .wrap{max-width:1200px;margin:auto;padding:16px}
+
+    .card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 10px 24px rgba(0,0,0,.08);margin-top:12px}
+    .btn{
+      display:inline-block;
+      padding:10px 14px;
+      border-radius:12px;
+      background:#0b1b3a;
+      color:#fff;
+      text-decoration:none;
+      font-weight:900;
+      border:none;
+      cursor:pointer;
+    }
+
+    .mini{font-size:12px;color:#666}
+    .title{font-size:16px;font-weight:900;color:#0b1b3a;margin:0 0 6px}
+
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+      gap:12px;
+      margin-top:12px
+    }
+
+    .p{
+      background:#fff;
+      border-radius:16px;
+      padding:14px;
+      box-shadow:0 10px 24px rgba(0,0,0,.08);
+      border:1px solid #eee;
+      overflow:hidden;
+    }
+
+    .img{
+      width:100%;
+      height:180px;
+      object-fit:cover;
+      border-radius:14px;
+      background:#f2f2f2;
+      border:1px solid #eee;
+    }
+
+    .badge{
+      display:inline-block;
+      margin-top:10px;
+      padding:4px 10px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:900;
+      background:#dcfce7;
+      color:#166534;
+    }
+
+    .kv{margin-top:8px;font-size:13px;color:#333}
+    .kv b{color:#0b1b3a}
+
+    .photosRow{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:6px;
+      margin-top:10px;
+    }
+    .photosRow img{
+      width:100%;
+      height:60px;
+      object-fit:cover;
+      border-radius:10px;
+      border:1px solid #eee;
+      background:#f2f2f2;
+      cursor:pointer;
+    }
+
+    .loc{margin-top:8px;font-size:12px;color:#666}
+  </style>
+</head>
+
+<body>
+<header><b>Public Listings ✅ (PRO)</b></header>
+
+<div class="wrap">
+
+  <div class="card">
+    <a class="btn" href="index.html">⬅ Back Dashboard</a>
+    <button class="btn" id="refreshBtn" style="float:right">Refresh</button>
+
+    <p class="title" style="margin-top:14px;">✅ Approved Properties Only</p>
+    <div class="mini">Only <b>APPROVED</b> listings public me show hoti hain ✅</div>
+  </div>
+
+  <div class="card">
+    <div id="msg" class="mini">Loading...</div>
+    <div id="grid" class="grid"></div>
+  </div>
+
+</div>
+
+<script type="module">
+  import { getFirestore, collection, getDocs, query, where, orderBy }
+    from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+  import { getApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+
+  const db = getFirestore(getApp());
+
+  const msg = document.getElementById("msg");
+  const grid = document.getElementById("grid");
+  const refreshBtn = document.getElementById("refreshBtn");
+
+  function openImg(url){
+    if(!url) return;
+    window.open(url, "_blank");
+  }
+
+  function cardHTML(p){
+    const title = p.title || "Property";
+    const city = p.city || "-";
+    const price = p.price || "-";
+    const type = p.type || "-";
+    const owner = p.ownerName || "-";
+    const mobile = p.mobile || "-";
+    const gps = p.gps || null;
+
+    const imgs = Array.isArray(p.images) ? p.images : [];
+    const cover = imgs.length ? imgs[0] : "";
+
+    const thumbs = imgs.slice(0,4).map(u => `<img src="${u}" onclick="window.open('${u}','_blank')" />`).join("");
+
+    return `
+      <div class="p">
+        ${cover ? `<img class="img" src="${cover}" onclick="window.open('${cover}','_blank')" />` : `<div class="img"></div>`}
+
+        <div class="badge">APPROVED ✅ VERIFIED</div>
+
+        <div class="kv"><b>${title}</b></div>
+        <div class="kv">📍 City: <b>${city}</b></div>
+        <div class="kv">🏷 Type: <b>${type}</b></div>
+        <div class="kv">💰 Price: <b>${price}</b></div>
+        <div class="kv">👤 Owner: <b>${owner}</b></div>
+        <div class="kv">📞 Mobile: <b>${mobile}</b></div>
+
+        ${gps ? `<div class="loc">📍 GPS: Lat ${gps.lat}, Lng ${gps.lng} (Acc ${gps.accuracy}m)</div>` : ``}
+
+        ${imgs.length ? `<div class="photosRow">${thumbs}</div>` : ``}
+      </div>
+    `;
+  }
+
+  async function load(){
+    msg.innerHTML = "⏳ Loading approved listings...";
+    grid.innerHTML = "";
+
+    try{
+      const q = query(
+        collection(db,"properties"),
+        where("status","==","APPROVED"),
+        orderBy("createdAt","desc")
+      );
+
+      const snap = await getDocs(q);
+
+      if(snap.empty){
+        msg.innerHTML = "✅ No approved properties found.";
+        return;
+      }
+
+      let html = "";
+      snap.forEach(d=>{
+        const p = d.data();
+        html += cardHTML(p);
+      });
+
+      grid.innerHTML = html;
+      msg.innerHTML = `✅ Showing <b>${snap.size}</b> approved properties`;
+
+    }catch(e){
+      console.log(e);
+      msg.innerHTML = "❌ Error loading listings (check Firestore rules + indexes)";
+    }
+  }
+
+  refreshBtn.onclick = load;
+  load();
+</script>
+
+</body>
+</html>

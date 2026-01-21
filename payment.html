@@ -1,0 +1,212 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Payment Proof (PRO) - SP Verified Property</title>
+
+  <style>
+    body{margin:0;font-family:Arial;background:#f6f7fb}
+    header{background:#0b1b3a;color:#fff;padding:16px}
+    .wrap{max-width:900px;margin:auto;padding:16px}
+    .card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 10px 24px rgba(0,0,0,.08);margin-top:12px}
+
+    .btn{
+      display:block;padding:12px;border-radius:12px;background:#0b1b3a;color:#fff;
+      text-decoration:none;font-weight:900;margin-top:10px;text-align:center;border:none;width:100%;cursor:pointer
+    }
+    .btn.green{background:#22c55e}
+    .btn.gray{background:#64748b}
+
+    .mini{font-size:12px;color:#666}
+    .title{font-size:16px;font-weight:900;color:#0b1b3a;margin:0 0 6px}
+
+    input, select, textarea{
+      width:100%;padding:12px;border-radius:12px;border:1px solid #ddd;outline:none;margin-top:8px;
+      font-size:14px;box-sizing:border-box
+    }
+    textarea{min-height:70px;resize:vertical}
+
+    .note{background:#f1f3ff;border:1px solid #dfe3ff;padding:12px;border-radius:14px;margin-top:10px}
+    .warn{background:#fff7ed;border:1px solid #ffd8a8;padding:12px;border-radius:14px;margin-top:10px}
+
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .col{flex:1;min-width:240px}
+
+    img{
+      width:100%;
+      border-radius:14px;
+      margin-top:10px;
+      max-height:280px;
+      object-fit:cover;
+      background:#f2f2f2;
+    }
+    progress{width:100%;height:16px;margin-top:10px}
+  </style>
+</head>
+
+<body>
+<header><b>Payment Proof ✅ (PRO)</b></header>
+
+<div class="wrap">
+
+  <div class="card">
+    <a class="btn gray" href="index.html">⬅ Back Dashboard</a>
+
+    <p class="title" style="margin-top:12px;">💳 Payment Proof Upload</p>
+    <div class="mini">Screenshot upload compulsory ✅</div>
+
+    <div class="note mini" style="margin-top:12px;">
+      ✅ Plan select karke payment karo.<br/>
+      ✅ Screenshot upload karo, Admin approve karega tab plan ACTIVE hoga ✅
+    </div>
+
+    <div class="row" style="margin-top:12px;">
+      <div class="col">
+        <label class="mini">Plan Selected</label>
+        <select id="plan">
+          <option value="BASIC">BASIC</option>
+          <option value="STANDARD">STANDARD</option>
+          <option value="PREMIUM">PREMIUM</option>
+        </select>
+      </div>
+
+      <div class="col">
+        <label class="mini">Amount Paid (₹)</label>
+        <input id="amount" placeholder="Ex: 499" />
+      </div>
+    </div>
+
+    <label class="mini">UTR / Transaction ID</label>
+    <input id="utr" placeholder="Enter UTR / Transaction ID" />
+
+    <label class="mini">Payment Note (Optional)</label>
+    <textarea id="note" placeholder="Any note..."></textarea>
+
+    <label class="mini">Upload Payment Screenshot *</label>
+    <input type="file" id="shot" accept="image/*" />
+
+    <img id="preview" style="display:none;" />
+    <progress id="prog" value="0" max="100"></progress>
+    <div id="upMsg" class="mini"></div>
+
+    <button class="btn green" id="submitBtn">✅ Submit Payment Proof</button>
+    <div id="msg" class="mini" style="margin-top:12px;"></div>
+
+    <div class="warn mini">
+      ⚠️ Admin approve hone ke baad hi plan ACTIVE hoga ✅
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+  import { VPI } from "./vpi.js?v=2";
+
+  import { getFirestore, collection, addDoc, serverTimestamp, doc, setDoc }
+    from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+  import { getStorage, ref, uploadBytes, getDownloadURL }
+    from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
+
+  import { getApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+
+  const app = getApp();
+  const db = getFirestore(app);
+  const storage = getStorage(app);
+
+  const planEl = document.getElementById("plan");
+  const amountEl = document.getElementById("amount");
+  const utrEl = document.getElementById("utr");
+  const noteEl = document.getElementById("note");
+
+  const shotEl = document.getElementById("shot");
+  const preview = document.getElementById("preview");
+
+  const submitBtn = document.getElementById("submitBtn");
+  const msg = document.getElementById("msg");
+
+  const prog = document.getElementById("prog");
+  const upMsg = document.getElementById("upMsg");
+
+  const u = VPI.requireLogin();
+
+  function isNumber(x){
+    return /^[0-9]+$/.test((x || "").trim());
+  }
+
+  function previewImage(){
+    const f = shotEl.files[0];
+    if(!f) return;
+    preview.src = URL.createObjectURL(f);
+    preview.style.display = "block";
+  }
+  shotEl.onchange = previewImage;
+
+  async function uploadScreenshot(file){
+    const path = `payments/${u.uid}/${Date.now()}_payment.jpg`;
+    const r = ref(storage, path);
+    await uploadBytes(r, file);
+    return await getDownloadURL(r);
+  }
+
+  submitBtn.onclick = async ()=>{
+    try{
+      const plan = planEl.value;
+      const amount = amountEl.value.trim();
+      const utr = utrEl.value.trim();
+      const note = noteEl.value.trim();
+      const shot = shotEl.files[0];
+
+      if(!utr) return alert("❌ UTR required");
+      if(amount && !isNumber(amount)) return alert("❌ Amount must be number");
+      if(!shot) return alert("❌ Payment screenshot upload compulsory");
+
+      msg.innerHTML = "⏳ Uploading screenshot...";
+      upMsg.innerHTML = "Uploading...";
+      prog.value = 10;
+      submitBtn.disabled = true;
+
+      const screenshotURL = await uploadScreenshot(shot);
+
+      prog.value = 70;
+      msg.innerHTML = "⏳ Saving payment proof...";
+
+      // ✅ Save payments record
+      await addDoc(collection(db, "payments"), {
+        uid: u.uid,
+        email: u.email || "",
+        planSelected: plan,
+        amount: amount || "",
+        utr,
+        note,
+        screenshotURL,
+        status: "PENDING",
+        createdAt: serverTimestamp()
+      });
+
+      // ✅ Update user doc
+      await setDoc(doc(db, "users", u.uid), {
+        planSelected: plan,
+        planStatus: "PENDING",
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      prog.value = 100;
+      upMsg.innerHTML = "✅ Upload complete";
+      msg.innerHTML = "✅ Payment proof submitted (Pending Approval)";
+      alert("✅ Payment proof submitted! Admin approval pending.");
+      location.href = "index.html";
+
+    }catch(e){
+      console.log(e);
+      msg.innerHTML = "❌ Error: " + (e?.message || e);
+      alert("❌ Payment submit failed");
+    }finally{
+      submitBtn.disabled = false;
+    }
+  };
+</script>
+
+</body>
+</html>
