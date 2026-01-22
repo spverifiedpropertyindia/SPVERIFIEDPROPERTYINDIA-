@@ -51,6 +51,22 @@
     .alertYellow{background:#fef9c3;border:1px solid #fde047;color:#854d0e}
     .alertRed{background:#fee2e2;border:1px solid #fecaca;color:#991b1b}
   </style>
+<style>
+/* ===== SP FAQ (Auto Added) ===== */
+.sp-faq-section{padding:40px 14px;background:#f6f7fb;font-family:Arial,sans-serif;}
+.sp-faq-container{max-width:900px;margin:auto;background:#fff;border-radius:14px;padding:24px;box-shadow:0 8px 25px rgba(0,0,0,.08);}
+.sp-faq-title{font-size:26px;margin:0;text-align:center;}
+.sp-faq-subtitle{text-align:center;margin:8px 0 18px;color:#555;}
+.sp-faq-tabs{display:flex;gap:10px;justify-content:center;margin-bottom:18px;flex-wrap:wrap;}
+.sp-faq-tab{border:1px solid #ddd;padding:10px 16px;border-radius:10px;cursor:pointer;background:#fff;font-weight:600;}
+.sp-faq-tab.active{background:#111;color:#fff;border-color:#111;}
+.sp-faq-tab-content{display:none;}
+.sp-faq-tab-content.active{display:block;}
+.sp-faq-item{border:1px solid #eee;border-radius:12px;margin-bottom:10px;overflow:hidden;}
+.sp-faq-question{width:100%;text-align:left;padding:14px 14px;border:none;background:#fafafa;font-size:16px;font-weight:700;cursor:pointer;}
+.sp-faq-answer{display:none;padding:12px 14px 16px;background:#fff;color:#444;line-height:1.6;}
+.sp-faq-item.open .sp-faq-answer{display:block;}
+</style>
 </head>
 
 <body>
@@ -321,5 +337,113 @@
   refresh();
 </script>
 
+<section class="sp-faq-section" id="faq">
+  <div class="sp-faq-container">
+    <h2 class="sp-faq-title">Frequently Asked Questions (FAQ)</h2>
+    <p class="sp-faq-subtitle">Customer / Owner / Broker-Agent ke common doubts</p>
+
+    <div class="sp-faq-tabs">
+      <button class="sp-faq-tab active" data-tab="customer">Customer</button>
+      <button class="sp-faq-tab" data-tab="owner">Owner</button>
+      <button class="sp-faq-tab" data-tab="agent">Broker / Agent</button>
+    </div>
+
+    <div class="sp-faq-tab-content active" id="tab-customer">
+      <div class="sp-faq-item">
+        <button class="sp-faq-question">1) Ye property 100% verified hai ya nahi?</button>
+        <div class="sp-faq-answer">Haan, listings admin approval ke baad hi live hoti hain. Verified sellers/agents + KYC ke through trust maintain hota hai.</div>
+      </div>
+      <div class="sp-faq-item">
+        <button class="sp-faq-question">2) Owner/agent genuine hai kya?</button>
+        <div class="sp-faq-answer">KYC verification (ID + photo proof) ke baad hi account activate hota hai.</div>
+      </div>
+      <div class="sp-faq-item">
+        <button class="sp-faq-question">3) Exact location / GPS milega kya?</button>
+        <div class="sp-faq-answer">Haan, property add karte time GPS location upload hoti hai jisse buyers ko correct idea milta hai.</div>
+      </div>
+      <div class="sp-faq-item">
+        <button class="sp-faq-question">4) Site visit / contact kaise kare?</button>
+        <div class="sp-faq-answer">Listing me contact button/WhatsApp se direct owner/agent se connect ho sakte ho.</div>
+      </div>
+      <div class="sp-faq-item">
+        <button class="sp-faq-question">5) Price negotiation possible hai?</button>
+        <div class="sp-faq-answer">Negotiation owner/agent se direct call/WhatsApp par depend karega.</div>
+      </div>
+      <div class="sp-faq-item">
+        <button class="sp-faq-question">6) Listing fake nikli to support kya hai?</button>
+        <div class="sp-faq-answer">Aap WhatsApp/Call par report kar sakte ho. Admin action ke through fake listing remove ki ja sakti hai.</div>
+      </div>
+    </div>
+
+    <div class="sp-faq-tab-content" id="tab-owner">
+      <div class="sp-faq-item">
+        <button class="sp-faq-question">1) Property list karne ke liye KYC mandatory hai?</button>
+        <div class="sp-faq-answer">Haan, security aur trust ke liye KYC compulsory hai.</div>
+      </div>
+      <div class="sp-faq-item">
+        <button class="sp-faq-question">2) Payment ke baad listing live kab hogi?</button>
+        <div class="sp-faq-answer">Payment proof verify hone ke baad admin approval milta hai, uske baad property add karke listing live hoti hai.</div>
+      </div>
+      <div class="sp-faq-item">
+        <button class="sp-faq-question">3) Minimum photos kitni chahiye?</button>
+        <div class="sp-faq-answer">Recommended: minimum 3 real photos (front view + inside + location/road view).</div>
+      </div>
+      <div class="sp-faq-item">
+        <button class="sp-faq-question">4) Listing reject ho gayi to reason milega?</button>
+        <div class="sp-faq-answer">Haan, admin panel se rejection ka reason update karke owner ko bataya ja sakta hai.</div>
+      </div>
+      <div class="sp-faq-item">
+        <button class="sp-faq-question">5) Property sold ho gayi to remove/update kaise kare?</button>
+        <div class="sp-faq-answer">Aap admin/support ko contact karke listing update/remove karwa sakte ho.</div>
+      </div>
+    </div>
+
+    <div class="sp-faq-tab-content" id="tab-agent">
+      <div class="sp-faq-item">
+        <button class="sp-faq-question">1) Agent/Broker ke liye KYC compulsory hai?</button>
+        <div class="sp-faq-answer">Haan, verified agent profile se customer trust aur leads dono improve hote hain.</div>
+      </div>
+      <div class="sp-faq-item">
+        <button class="sp-faq-question">2) Agent owner ki property list kar sakta hai?</button>
+        <div class="sp-faq-answer">Haan, lekin genuine details + real photos + correct GPS dena compulsory hai.</div>
+      </div>
+      <div class="sp-faq-item">
+        <button class="sp-faq-question">3) Lead/customer enquiry kaise milegi?</button>
+        <div class="sp-faq-answer">Listing me contact buttons se buyers directly call/WhatsApp karte hain.</div>
+      </div>
+      <div class="sp-faq-item">
+        <button class="sp-faq-question">4) Fake listing daalne par kya hoga?</button>
+        <div class="sp-faq-answer">Admin verification me reject ho sakti hai aur repeated issue par account block bhi ho sakta hai.</div>
+      </div>
+      <div class="sp-faq-item">
+        <button class="sp-faq-question">5) Listing ranking/priority kaise milti hai?</button>
+        <div class="sp-faq-answer">High quality photos, complete details, verified status aur approved listing se visibility improve hoti hai.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SP FAQ JS (Auto Added) ===== -->
+<script>
+(function(){
+  const tabs=document.querySelectorAll(".sp-faq-tab");
+  const contents=document.querySelectorAll(".sp-faq-tab-content");
+  tabs.forEach(tab=>{
+    tab.addEventListener("click",()=>{
+      tabs.forEach(t=>t.classList.remove("active"));
+      contents.forEach(c=>c.classList.remove("active"));
+      tab.classList.add("active");
+      const el=document.getElementById("tab-"+tab.dataset.tab);
+      if(el) el.classList.add("active");
+    });
+  });
+  document.querySelectorAll(".sp-faq-question").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const item=btn.closest(".sp-faq-item");
+      if(item) item.classList.toggle("open");
+    });
+  });
+})();
+</script>
 </body>
-</html>
+                                                   </html>
