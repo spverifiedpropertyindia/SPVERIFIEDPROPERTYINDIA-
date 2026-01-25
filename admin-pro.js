@@ -2,461 +2,419 @@ import { db } from "./firebase.js";
 import { listenUser, logoutUser } from "./auth.js";
 
 import {
-  collection, query, orderBy, onSnapshot,
-  doc, getDoc, updateDoc, setDoc,
+  collection,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+  doc,
+  getDoc,
+  updateDoc,
   deleteDoc,
-  serverTimestamp,
-  where, getDocs, writeBatch
+  addDoc,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const ADMIN_EMAIL = "raazsahu1000@gmail.com";
 
-// ✅ Tabs
-const tabBtns = document.querySelectorAll(".tabBtn");
-const tabs = ["kycTab", "paymentTab", "propertyTab", "approvedTab", "addTab"];
-
-tabBtns.forEach(btn=>{
-  btn.onclick = ()=>{
-    tabBtns.forEach(b=>b.classList.remove("active"));
-    btn.classList.add("active");
-
-    const tabId = btn.dataset.tab;
-    tabs.forEach(t=>{
-      const el = document.getElementById(t);
-      if(el){
-        el.classList.add("hidden");
-      }
-    });
-
-    const activeTab = document.getElementById(tabId);
-    if(activeTab){
-      activeTab.classList.remove("hidden");
-    }
-  };
-});
-
-// ✅ Logout
+// ✅ UI
 const logoutBtn = document.getElementById("logoutBtn");
-if(logoutBtn){
-  logoutBtn.onclick = async ()=>{
-    await logoutUser();
-    location.href = "login.html";
-  };
-}
 
-// ✅ Stat counts
 const kycCount = document.getElementById("kycCount");
 const propPendingCount = document.getElementById("propPendingCount");
 const propApprovedCount = document.getElementById("propApprovedCount");
 
-// ✅ Lists
 const kycList = document.getElementById("kycList");
 const paymentList = document.getElementById("paymentList");
 const pendingProps = document.getElementById("pendingProps");
 const approvedProps = document.getElementById("approvedProps");
 
-// ✅ Property Filters
 const adminSearch = document.getElementById("adminSearch");
 const adminTypeFilter = document.getElementById("adminTypeFilter");
 
-// ✅ PLAN VALIDITY
-const PLAN_DAYS = {
-  BASIC: 28,
-  STANDARD: 56,
-  PREMIUM: 84
-};
+const form = document.getElementById("form");
 
-function addDaysToDate(dateObj, days){
-  const d = new Date(dateObj);
-  d.setDate(d.getDate() + days);
-  return d;
+// ✅ Logout
+if (logoutBtn) {
+  logoutBtn.onclick = async () => {
+    await logoutUser();
+    location.href = "login.html";
+  };
 }
 
-function formatDate(d){
-  try{
-    return new Date(d).toLocaleDateString("en-IN");
-  }catch(e){
-    return "";
-  }
-}
+// ✅ Tabs
+document.querySelectorAll(".tabBtn").forEach((btn) => {
+  btn.onclick = () => {
+    document.querySelectorAll(".tabBtn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
 
-// ✅ Protect Admin Page
-listenUser(async (u)=>{
-  if(!u){
+    const tab = btn.getAttribute("data-tab");
+    document.querySelectorAll(".box").forEach((box) => box.classList.add("hidden"));
+    document.getElementById(tab).classList.remove("hidden");
+  };
+});
+
+let currentUser = null;
+
+// ✅ Auth Check Admin
+listenUser(async (u) => {
+  if (!u) {
     alert("Login required!");
     location.href = "login.html";
     return;
   }
 
-  if(u.email !== ADMIN_EMAIL){
+  currentUser = u;
+
+  if (u.email !== ADMIN_EMAIL) {
     alert("Access denied! Admin only.");
     location.href = "dashboard.html";
     return;
   }
 
-  // ✅ Load All Admin Data
-  loadKYCPending();
-  loadPaymentsPending();
-  loadProperties();
-  initAddPropertyForm();
+  loadKycRequests();
+  loadPayments();
+  loadPendingProperties();
+  loadApprovedProperties();
 });
 
-// ----------------------------------------
-// ✅ KYC REQUESTS
-// ----------------------------------------
-function loadKYCPending(){
-  const q = query(collection(db, "kyc"), orderBy("createdAt", "desc"));
 
-  onSnapshot(q, async (snap)=>{
-    let pending = 0;
+// ======================================
+// ✅ KYC REQUESTS (Approve/Reject)
+// ======================================
+function loadKycRequests() {
+  const q = query(collection(db, "kyc"), where("status", "==", "PENDING"));
+
+  onSnapshot(q, (snap) => {
     kycList.innerHTML = "";
+    kycCount.innerHTML = snap.size;
 
-    snap.forEach((docSnap)=>{
-      const d = docSnap.data();
-
-      if(d.status === "PENDING"){
-        pending++;
-
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <h3>👤 ${d.fullName || "No Name"}</h3>
-          <p class="small"><b>Phone:</b> ${d.phone || ""}</p>
-          <p class="small"><b>Address:</b> ${d.address || ""}</p>
-          <p class="small"><b>ID Type:</b> ${d.idType || ""}</p>
-          <p class="small"><b>ID Number:</b> ${d.idNumber || ""}</p>
-          <p class="small"><b>Status:</b> ${d.status}</p>
-
-          <div style="display:flex;gap:8px;margin-top:10px;">
-            <button class="btn" style="flex:1;" data-approve>Approve</button>
-            <button class="btn2" style="flex:1;" data-reject>Reject</button>
-          </div>
-        `;
-
-        card.querySelector("[data-approve]").onclick = async ()=>{
-          await approveKYC(docSnap.id);
-        };
-
-        card.querySelector("[data-reject]").onclick = async ()=>{
-          await rejectKYC(docSnap.id);
-        };
-
-        kycList.appendChild(card);
-      }
-    });
-
-    if(kycCount) kycCount.innerText = pending;
-
-    if(pending === 0){
-      kycList.innerHTML = `<p class="small">✅ No pending KYC requests.</p>`;
+    if (snap.empty) {
+      kycList.innerHTML = `<p class="small">✅ No pending KYC.</p>`;
+      return;
     }
+
+    snap.forEach((d) => {
+      const k = d.data();
+
+      kycList.innerHTML += `
+        <div class="card">
+          <h3>👤 ${k.fullName || "N/A"}</h3>
+          <p class="small"><b>Phone:</b> ${k.phone || ""}</p>
+          <p class="small"><b>Address:</b> ${k.address || ""}</p>
+          <p class="small"><b>ID Type:</b> ${k.idType || ""}</p>
+          <p class="small"><b>ID Number:</b> ${k.idNumber || ""}</p>
+
+          <hr style="margin:10px 0;border:0;border-top:1px solid #eee;"/>
+
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            ${k.panUrl ? `<a class="btn2" target="_blank" href="${k.panUrl}">View PAN</a>` : ""}
+            ${k.aadhaarFrontUrl ? `<a class="btn2" target="_blank" href="${k.aadhaarFrontUrl}">Aadhaar Front</a>` : ""}
+            ${k.aadhaarBackUrl ? `<a class="btn2" target="_blank" href="${k.aadhaarBackUrl}">Aadhaar Back</a>` : ""}
+          </div>
+
+          <div style="margin-top:12px;display:flex;gap:10px;">
+            <button class="btn" onclick="approveKyc('${d.id}', '${k.uid}')">Approve</button>
+            <button class="btn2" onclick="rejectKyc('${d.id}', '${k.uid}')">Reject</button>
+          </div>
+        </div>
+      `;
+    });
   });
 }
 
-async function approveKYC(uid){
-  if(!confirm("Approve this KYC?")) return;
+window.approveKyc = async function (kycDocId, uid) {
+  if (!confirm("Approve this KYC?")) return;
 
-  // ✅ Update KYC collection
-  await updateDoc(doc(db, "kyc", uid), {
+  await updateDoc(doc(db, "kyc", kycDocId), {
     status: "APPROVED",
     approvedAt: serverTimestamp()
   });
 
-  // ✅ Update users collection (important!)
-  await setDoc(doc(db, "users", uid), {
+  await updateDoc(doc(db, "users", uid), {
     kycStatus: "APPROVED",
-    kycApprovedAt: serverTimestamp()
-  }, { merge: true });
+    kycUpdatedAt: serverTimestamp()
+  });
 
   alert("✅ KYC Approved!");
-}
+};
 
-async function rejectKYC(uid){
-  if(!confirm("Reject this KYC?")) return;
+window.rejectKyc = async function (kycDocId, uid) {
+  if (!confirm("Reject this KYC?")) return;
 
-  await updateDoc(doc(db, "kyc", uid), {
+  await updateDoc(doc(db, "kyc", kycDocId), {
     status: "REJECTED",
     rejectedAt: serverTimestamp()
   });
 
-  await setDoc(doc(db, "users", uid), {
+  await updateDoc(doc(db, "users", uid), {
     kycStatus: "REJECTED",
-    kycRejectedAt: serverTimestamp()
-  }, { merge: true });
+    kycUpdatedAt: serverTimestamp()
+  });
 
   alert("❌ KYC Rejected!");
-}
+};
 
-// ----------------------------------------
-// ✅ PAYMENTS REQUESTS
-// ----------------------------------------
-function loadPaymentsPending(){
+
+// ======================================
+// ✅ PAYMENTS (Approve/Reject)
+// ======================================
+function loadPayments() {
   const q = query(collection(db, "payments"), orderBy("createdAt", "desc"));
 
-  onSnapshot(q, async (snap)=>{
+  onSnapshot(q, (snap) => {
     paymentList.innerHTML = "";
 
-    let found = 0;
+    if (snap.empty) {
+      paymentList.innerHTML = `<p class="small">No payments found.</p>`;
+      return;
+    }
 
-    snap.forEach((docSnap)=>{
-      const p = docSnap.data();
+    snap.forEach((d) => {
+      const p = d.data();
 
-      if(p.status === "PENDING"){
-        found++;
-
-        const card = document.createElement("div");
-        card.className = "card";
-
-        card.innerHTML = `
-          <h3>💳 ${p.plan || ""} (${p.role || ""})</h3>
+      paymentList.innerHTML += `
+        <div class="card">
+          <h3>💳 ${p.role || ""} - ${p.plan || ""}</h3>
           <p class="small"><b>Email:</b> ${p.email || ""}</p>
           <p class="small"><b>Amount:</b> ₹${p.amount || 0}</p>
-          <p class="small"><b>UTR/PaymentID:</b> ${p.utr || ""}</p>
-          <p class="small"><b>Status:</b> ${p.status}</p>
+          <p class="small"><b>UTR / TXN:</b> ${p.utr || ""}</p>
+          <p class="small"><b>Status:</b> <b>${p.status || ""}</b></p>
 
-          <div style="display:flex;gap:8px;margin-top:10px;">
-            <button class="btn" style="flex:1;" data-approve>Approve</button>
-            <button class="btn2" style="flex:1;" data-reject>Reject</button>
+          <div style="margin-top:10px;display:flex;gap:10px;">
+            <button class="btn" onclick="approvePayment('${d.id}', '${p.uid}', '${p.role}', '${p.plan}')">Approve</button>
+            <button class="btn2" onclick="rejectPayment('${d.id}')">Reject</button>
           </div>
-        `;
-
-        card.querySelector("[data-approve]").onclick = async ()=>{
-          await approvePayment(docSnap.id, p);
-        };
-
-        card.querySelector("[data-reject]").onclick = async ()=>{
-          await rejectPayment(docSnap.id);
-        };
-
-        paymentList.appendChild(card);
-      }
+        </div>
+      `;
     });
-
-    if(found === 0){
-      paymentList.innerHTML = `<p class="small">✅ No pending payments.</p>`;
-    }
   });
 }
 
-async function approvePayment(paymentDocId, paymentData){
-  if(!confirm("Approve this payment and activate plan?")) return;
+window.approvePayment = async function (paymentId, uid, role, plan) {
+  if (!confirm("Approve this payment?")) return;
 
-  const uid = paymentData.uid;
-  const plan = paymentData.plan;
-  const role = paymentData.role;
-  const amount = paymentData.amount || 0;
-
-  const days = PLAN_DAYS[plan] || 0;
-  const expiry = addDaysToDate(new Date(), days);
-
-  // ✅ Mark payment as approved
-  await updateDoc(doc(db, "payments", paymentDocId), {
+  await updateDoc(doc(db, "payments", paymentId), {
     status: "APPROVED",
     approvedAt: serverTimestamp()
   });
 
-  // ✅ Update user plan in users collection
-  await setDoc(doc(db, "users", uid), {
-    planStatus: "ACTIVE",
+  await updateDoc(doc(db, "users", uid), {
     planRole: role,
-    planName: plan,
-    planAmount: amount,
-    planStartDate: new Date().toISOString(),
-    planExpiryDate: expiry.toISOString(),
-    planExpiryLabel: formatDate(expiry),
-    lastPaymentId: paymentDocId,
-    updatedAt: serverTimestamp()
-  }, { merge: true });
+    planType: plan,
+    planStatus: "ACTIVE",
+    planUpdatedAt: serverTimestamp()
+  });
 
-  // ✅ NEW FEATURE: Payment approve होते ही EXPIRED properties फिर से LIVE
-  await reviveUserProperties(uid);
+  alert("✅ Payment Approved & Plan Activated!");
+};
 
-  alert(`✅ Payment Approved!\nPlan Activated: ${plan}\nExpiry: ${formatDate(expiry)}`);
-}
+window.rejectPayment = async function (paymentId) {
+  if (!confirm("Reject this payment?")) return;
 
-async function rejectPayment(paymentDocId){
-  if(!confirm("Reject this payment?")) return;
-
-  await updateDoc(doc(db, "payments", paymentDocId), {
+  await updateDoc(doc(db, "payments", paymentId), {
     status: "REJECTED",
     rejectedAt: serverTimestamp()
   });
 
   alert("❌ Payment Rejected!");
-}
+};
 
-// ----------------------------------------
-// ✅ PROPERTIES (Pending + Approved)
-// ----------------------------------------
-function loadProperties(){
-  const q = query(collection(db, "properties"), orderBy("createdAt", "desc"));
 
-  let allProps = [];
+// ======================================
+// ✅ PROPERTIES (Pending) + WhatsApp button
+// ======================================
+let allPendingProps = [];
 
-  onSnapshot(q, (snap)=>{
-    allProps = [];
-    snap.forEach((d)=>{
-      allProps.push({ id: d.id, ...d.data() });
+function loadPendingProperties() {
+  const q = query(
+    collection(db, "properties"),
+    where("status", "==", "PENDING"),
+    orderBy("createdAt", "desc")
+  );
+
+  onSnapshot(q, (snap) => {
+    allPendingProps = [];
+    propPendingCount.innerHTML = snap.size;
+
+    snap.forEach((d) => {
+      allPendingProps.push({ id: d.id, ...d.data() });
     });
 
-    renderProperties(allProps);
+    renderPendingProps();
   });
-
-  // ✅ Search & Filter
-  if(adminSearch){
-    adminSearch.oninput = ()=>renderProperties(allProps);
-  }
-  if(adminTypeFilter){
-    adminTypeFilter.onchange = ()=>renderProperties(allProps);
-  }
 }
 
-function renderProperties(allProps){
-  pendingProps.innerHTML = "";
-  approvedProps.innerHTML = "";
+function renderPendingProps() {
+  const search = (adminSearch.value || "").toLowerCase().trim();
+  const typeFilter = adminTypeFilter.value;
 
-  let pending = 0;
-  let approved = 0;
-
-  const searchText = (adminSearch?.value || "").toLowerCase().trim();
-  const typeFilter = adminTypeFilter?.value || "";
-
-  const filtered = allProps.filter(p=>{
+  const filtered = allPendingProps.filter((p) => {
     const title = (p.title || "").toLowerCase();
     const city = (p.city || "").toLowerCase();
     const type = p.type || "";
 
-    const matchSearch = !searchText || title.includes(searchText) || city.includes(searchText);
+    const matchSearch = !search || title.includes(search) || city.includes(search);
     const matchType = !typeFilter || type === typeFilter;
 
     return matchSearch && matchType;
   });
 
-  filtered.forEach((p)=>{
-    const isApproved = p.status === "APPROVED";
+  pendingProps.innerHTML = "";
 
-    const card = document.createElement("div");
-    card.className = "card";
-    card.innerHTML = `
-      <h3>${p.title || "Property"}</h3>
-      <p class="small"><b>City:</b> ${p.city || ""}</p>
-      <p class="small"><b>Type:</b> ${p.type || ""}</p>
-      <p class="small"><b>Price:</b> ${p.price || ""}</p>
-      <p class="small"><b>Status:</b> ${p.status || "PENDING"}</p>
+  if (filtered.length === 0) {
+    pendingProps.innerHTML = `<p class="small">No pending properties found.</p>`;
+    return;
+  }
 
-      ${p.image ? `<img src="${p.image}" style="width:100%;border-radius:12px;margin-top:8px;border:1px solid #eee;" />` : ""}
+  filtered.forEach((p) => {
+    const w = (p.whatsapp || "").replace(/\D/g, ""); // ✅ numbers only
 
-      <div style="display:flex;gap:8px;margin-top:10px;">
-        ${isApproved
-          ? `<button class="btn2" style="flex:1;" data-delete>Delete</button>`
-          : `
-            <button class="btn" style="flex:1;" data-approve>Approve</button>
-            <button class="btn2" style="flex:1;" data-reject>Reject</button>
-          `
-        }
+    pendingProps.innerHTML += `
+      <div class="card">
+        <h3>🏠 ${p.title || ""}</h3>
+        <p class="small"><b>City:</b> ${p.city || ""}</p>
+        <p class="small"><b>State:</b> ${p.state || ""}</p>
+        <p class="small"><b>Type:</b> ${p.type || ""}</p>
+        <p class="small"><b>Price:</b> ${p.price || ""}</p>
+
+        <p class="small" style="margin-top:8px;">
+          <b>Owner:</b> ${p.ownerName || ""} (${p.ownerPhone || ""})
+        </p>
+
+        ${w ? `
+          <a class="btn2" target="_blank" style="margin-top:8px;display:inline-block;"
+             href="https://wa.me/91${w}">
+             ✅ WhatsApp Owner
+          </a>
+        ` : ""}
+
+        <div style="margin-top:12px;display:flex;gap:10px;">
+          <button class="btn" onclick="approveProperty('${p.id}')">Approve</button>
+          <button class="btn2" onclick="rejectProperty('${p.id}')">Reject</button>
+        </div>
       </div>
     `;
-
-    if(isApproved){
-      approved++;
-      card.querySelector("[data-delete]").onclick = async ()=>{
-        if(!confirm("Delete this property?")) return;
-        await deleteDoc(doc(db, "properties", p.id));
-        alert("🗑 Property deleted!");
-      };
-      approvedProps.appendChild(card);
-    }else{
-      pending++;
-      card.querySelector("[data-approve]").onclick = async ()=>{
-        await updateDoc(doc(db, "properties", p.id), {
-          status: "APPROVED",
-          approvedAt: serverTimestamp()
-        });
-        alert("✅ Property Approved!");
-      };
-
-      card.querySelector("[data-reject]").onclick = async ()=>{
-        if(!confirm("Reject this property?")) return;
-        await updateDoc(doc(db, "properties", p.id), {
-          status: "REJECTED",
-          rejectedAt: serverTimestamp()
-        });
-        alert("❌ Property Rejected!");
-      };
-
-      pendingProps.appendChild(card);
-    }
   });
-
-  if(propPendingCount) propPendingCount.innerText = pending;
-  if(propApprovedCount) propApprovedCount.innerText = approved;
-
-  if(pending === 0){
-    pendingProps.innerHTML = `<p class="small">✅ No pending properties.</p>`;
-  }
-  if(approved === 0){
-    approvedProps.innerHTML = `<p class="small">✅ No approved properties.</p>`;
-  }
 }
 
-// ----------------------------------------
-// ✅ ADD PROPERTY FORM
-// ----------------------------------------
-function initAddPropertyForm(){
-  const form = document.getElementById("form");
-  if(!form) return;
+adminSearch.oninput = renderPendingProps;
+adminTypeFilter.onchange = renderPendingProps;
 
-  form.onsubmit = async (e)=>{
+window.approveProperty = async function (propId) {
+  if (!confirm("Approve this property?")) return;
+
+  await updateDoc(doc(db, "properties", propId), {
+    status: "APPROVED",
+    approvedAt: serverTimestamp()
+  });
+
+  alert("✅ Property Approved!");
+};
+
+window.rejectProperty = async function (propId) {
+  if (!confirm("Reject this property?")) return;
+
+  await updateDoc(doc(db, "properties", propId), {
+    status: "REJECTED",
+    rejectedAt: serverTimestamp()
+  });
+
+  alert("❌ Property Rejected!");
+};
+
+
+// ======================================
+// ✅ APPROVED PROPERTIES + WhatsApp button
+// ======================================
+function loadApprovedProperties() {
+  const q = query(
+    collection(db, "properties"),
+    where("status", "==", "APPROVED"),
+    orderBy("createdAt", "desc")
+  );
+
+  onSnapshot(q, (snap) => {
+    approvedProps.innerHTML = "";
+    propApprovedCount.innerHTML = snap.size;
+
+    if (snap.empty) {
+      approvedProps.innerHTML = `<p class="small">No approved properties.</p>`;
+      return;
+    }
+
+    snap.forEach((d) => {
+      const p = d.data();
+      const w = (p.whatsapp || "").replace(/\D/g, "");
+
+      approvedProps.innerHTML += `
+        <div class="card">
+          <h3>✅ ${p.title || ""}</h3>
+          <p class="small"><b>City:</b> ${p.city || ""}</p>
+          <p class="small"><b>Type:</b> ${p.type || ""}</p>
+          <p class="small"><b>Price:</b> ${p.price || ""}</p>
+
+          ${w ? `
+            <a class="btn2" target="_blank" style="margin-top:8px;display:inline-block;"
+               href="https://wa.me/91${w}">
+               ✅ WhatsApp Owner
+            </a>
+          ` : ""}
+
+          <div style="margin-top:10px;">
+            <button class="btn2" onclick="deleteApprovedProperty('${d.id}')">Delete</button>
+          </div>
+        </div>
+      `;
+    });
+  });
+}
+
+window.deleteApprovedProperty = async function (propId) {
+  if (!confirm("Delete this approved property?")) return;
+  await deleteDoc(doc(db, "properties", propId));
+  alert("🗑 Property Deleted!");
+};
+
+
+// ======================================
+// ✅ ADD PROPERTY SAVE (Admin)
+// ======================================
+if (form) {
+  form.onsubmit = async (e) => {
     e.preventDefault();
 
-    const newProp = {
-      title: document.getElementById("title").value,
-      city: document.getElementById("city").value,
-      state: document.getElementById("state").value,
-      type: document.getElementById("type").value,
-      price: document.getElementById("price").value,
-      image: document.getElementById("image").value,
-      description: document.getElementById("description").value,
-      ownerName: document.getElementById("ownerName").value,
-      ownerPhone: document.getElementById("ownerPhone").value,
+    const title = document.getElementById("title").value.trim();
+    const city = document.getElementById("city").value.trim();
+    const state = document.getElementById("state").value.trim();
+    const type = document.getElementById("type").value;
+    const price = document.getElementById("price").value.trim();
+    const description = document.getElementById("description").value.trim();
+    const ownerName = document.getElementById("ownerName").value.trim();
+    const ownerPhone = document.getElementById("ownerPhone").value.trim();
+    const whatsapp = document.getElementById("whatsapp").value.trim();
 
-      status: "APPROVED", // ✅ admin add = auto approved
-      createdAt: serverTimestamp()
-    };
+    if (!title || !city || !type || !price || !description) {
+      alert("Please fill required fields!");
+      return;
+    }
 
-    // ✅ Save new property
-    const { addDoc, collection } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
-    await addDoc(collection(db, "properties"), newProp);
+    await addDoc(collection(db, "properties"), {
+      title,
+      city,
+      state,
+      type,
+      price,
+      description,
+      ownerName,
+      ownerPhone,
+      whatsapp, // ✅ Added
+      status: "PENDING",
+      createdAt: serverTimestamp(),
+      createdBy: currentUser?.uid || ""
+    });
 
-    alert("✅ Property Added Successfully!");
+    alert("✅ Property Saved! Status: PENDING");
     form.reset();
   };
 }
-
-// ✅ NEW FEATURE FUNCTION: Payment approve ke baad expired properties revive
-async function reviveUserProperties(uid){
-  try{
-    const q = query(
-      collection(db, "properties"),
-      where("uid", "==", uid),
-      where("status", "==", "EXPIRED")
-    );
-
-    const snap = await getDocs(q);
-    if(snap.empty) return;
-
-    const batch = writeBatch(db);
-
-    snap.forEach((d)=>{
-      batch.update(doc(db, "properties", d.id), {
-        status: "APPROVED",
-        revivedAt: new Date().toISOString()
-      });
-    });
-
-    await batch.commit();
-    console.log("✅ Auto Revived properties (plan active)");
-  }catch(err){
-    console.log("❌ Revive error:", err);
-  }
-  }
