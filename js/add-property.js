@@ -12,191 +12,169 @@ import {
 
 const ADMIN_EMAIL = "raazsahu1000@gmail.com";
 
+// DOM
 const form = document.getElementById("propForm");
+const dateTime = document.getElementById("dateTime");
 
 const photoFile = document.getElementById("photoFile");
-const previewBox = document.getElementById("previewBox");
+const photoPreview = document.getElementById("photoPreview");
+const imageUrlInput = document.getElementById("image");
 
 const gpsBtn = document.getElementById("gpsBtn");
+const gpsText = document.getElementById("gpsText");
+
 const city = document.getElementById("city");
 const state = document.getElementById("state");
 const locationAddress = document.getElementById("locationAddress");
-const lat = document.getElementById("lat");
-const lng = document.getElementById("lng");
 
 let currentUser = null;
-let finalWatermarkedBase64 = "";
+let base64Photo = "";
+let gpsLat = null;
+let gpsLng = null;
 
-// ✅ Date/Time String
-function getDateTimeString() {
-  const now = new Date();
-  return now.toLocaleDateString() + " " + now.toLocaleTimeString();
+// Auto Date/Time
+function nowText(){
+  const d = new Date();
+  return d.toLocaleDateString() + " " + d.toLocaleTimeString();
 }
+if(dateTime) dateTime.value = nowText();
 
-// ✅ Watermark function
-async function addWatermarkToBase64(base64, textLines = []) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-
-      canvas.width = img.width;
-      canvas.height = img.height;
-
-      // Draw original
-      ctx.drawImage(img, 0, 0);
-
-      // Watermark strip
-      const padding = Math.max(18, Math.floor(img.width * 0.02));
-      const lineHeight = Math.max(30, Math.floor(img.width * 0.03));
-      const stripHeight = (textLines.length * lineHeight) + padding;
-
-      ctx.fillStyle = "rgba(0,0,0,0.55)";
-      ctx.fillRect(0, canvas.height - stripHeight, canvas.width, stripHeight);
-
-      // Text
-      ctx.fillStyle = "#fff";
-      ctx.font = `bold ${Math.max(18, Math.floor(img.width * 0.028))}px Arial`;
-      ctx.textBaseline = "top";
-
-      let y = canvas.height - stripHeight + Math.floor(padding * 0.5);
-      for (const line of textLines) {
-        ctx.fillText(line, padding, y);
-        y += lineHeight;
-      }
-
-      const out = canvas.toDataURL("image/jpeg", 0.75); // ✅ compressed
-      resolve(out);
-    };
-
-    img.onerror = reject;
-    img.src = base64;
-  });
-}
-
-// ✅ Login check
-listenUser((u) => {
-  if (!u) {
+// Login check
+listenUser((u)=>{
+  if(!u){
     alert("Login required ✅");
-    location.href = "login.html";
+    location.href="login.html";
     return;
   }
   currentUser = u;
 });
 
-// ✅ GPS capture (COMPULSORY)
-gpsBtn.onclick = () => {
-  if (!navigator.geolocation) {
-    alert("GPS not supported ❌");
-    return;
-  }
-
-  gpsBtn.innerText = "Getting GPS...";
-
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      lat.value = pos.coords.latitude;
-      lng.value = pos.coords.longitude;
-
-      // ✅ fallback auto text (manual allowed but gps compulsory)
-      if (!city.value) city.value = "Fill City";
-      if (!state.value) state.value = "Fill State";
-      if (!locationAddress.value) {
-        locationAddress.value = `Lat:${lat.value}, Lng:${lng.value}`;
-      }
-
-      gpsBtn.innerText = "✅ GPS Captured";
-    },
-    () => {
-      gpsBtn.innerText = "📍 Capture GPS";
-      alert("GPS permission denied ❌\nLocation Allow करो ✅");
-    },
-    { enableHighAccuracy: true, timeout: 15000 }
-  );
-};
-
-// ✅ Photo capture -> watermark preview
-photoFile.addEventListener("change", async () => {
+// ✅ Convert photo to base64 + preview
+photoFile.addEventListener("change", ()=>{
   const file = photoFile.files?.[0];
-  if (!file) return;
+  if(!file) return;
 
   const reader = new FileReader();
-
-  reader.onload = async () => {
-    try {
-      const base64 = reader.result;
-
-      const dt = getDateTimeString();
-      const gpsText =
-        (lat.value && lng.value)
-          ? `GPS: ${lat.value}, ${lng.value}`
-          : "GPS: Not Captured";
-
-      const cityState = `City/State: ${city.value || "-"}, ${state.value || "-"}`;
-
-      const lines = [
-        "✅ SP VERIFIED PROPERTY INDIA",
-        `Date/Time: ${dt}`,
-        gpsText,
-        cityState
-      ];
-
-      finalWatermarkedBase64 = await addWatermarkToBase64(base64, lines);
-
-      previewBox.innerHTML = `
-        <img src="${finalWatermarkedBase64}"
-             style="width:100%;max-height:240px;object-fit:cover;border-radius:16px;border:1px solid #eee;">
-        <p class="small" style="margin-top:8px;">✅ Watermark Applied</p>
-      `;
-    } catch (e) {
-      console.error(e);
-      alert("Watermark error ❌");
-    }
+  reader.onload = ()=>{
+    base64Photo = reader.result;
+    photoPreview.innerHTML = `
+      <img src="${base64Photo}"
+        style="width:100%;max-height:230px;object-fit:cover;border-radius:16px;border:1px solid #eee;">
+      <p class="small" style="margin-top:8px;">✅ Photo Selected</p>
+    `;
   };
-
   reader.readAsDataURL(file);
 });
 
-// ✅ Submit property
-form.onsubmit = async (e) => {
+// ✅ Reverse geocode (FREE) from lat/lng using OpenStreetMap Nominatim
+async function reverseGeocode(lat, lng){
+  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
+  const res = await fetch(url, {
+    headers: { "Accept": "application/json" }
+  });
+  const data = await res.json();
+
+  const addr = data.address || {};
+  const cityName =
+    addr.city || addr.town || addr.village || addr.county || "";
+
+  const stateName = addr.state || "";
+
+  const full = data.display_name || "";
+
+  return { cityName, stateName, full };
+}
+
+// ✅ GPS Capture button (100% reliable)
+gpsBtn.onclick = ()=>{
+  if(!navigator.geolocation){
+    alert("❌ GPS not supported in this phone");
+    return;
+  }
+
+  gpsBtn.innerText = "📍 Capturing GPS...";
+  gpsBtn.disabled = true;
+
+  navigator.geolocation.getCurrentPosition(
+    async (pos)=>{
+      gpsLat = pos.coords.latitude;
+      gpsLng = pos.coords.longitude;
+
+      gpsText.innerHTML = `✅ GPS Captured: <b>${gpsLat}</b>, <b>${gpsLng}</b>`;
+
+      // auto fill city/state/address
+      try{
+        const r = await reverseGeocode(gpsLat, gpsLng);
+        city.value = r.cityName || "Unknown";
+        state.value = r.stateName || "Unknown";
+        locationAddress.value = r.full || `Lat:${gpsLat}, Lng:${gpsLng}`;
+      }catch(e){
+        city.value = "Fill manually";
+        state.value = "Fill manually";
+        locationAddress.value = `Lat:${gpsLat}, Lng:${gpsLng}`;
+      }
+
+      gpsBtn.innerText = "✅ GPS Captured";
+      gpsBtn.disabled = false;
+    },
+    (err)=>{
+      console.log(err);
+      gpsBtn.innerText = "📍 Capture GPS";
+      gpsBtn.disabled = false;
+
+      if(err.code === 1){
+        alert("❌ Location Permission BLOCKED!\n\n✅ Fix:\nChrome → Settings → Site Settings → Location → Allow\nthen reload site.");
+      }else if(err.code === 2){
+        alert("❌ GPS not available!\n✅ Turn ON Location + High Accuracy mode.");
+      }else{
+        alert("❌ GPS timeout!\n✅ Open GPS & try again.");
+      }
+    },
+    { enableHighAccuracy:true, timeout:20000, maximumAge:0 }
+  );
+};
+
+// ✅ Submit
+form.onsubmit = async (e)=>{
   e.preventDefault();
 
-  if (!currentUser) {
+  if(!currentUser){
     alert("Login required ❌");
     return;
   }
 
   const isAdmin = currentUser.email === ADMIN_EMAIL;
 
-  // ✅ User document
-  const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+  // user doc check (user process only)
+  const userSnap = await getDoc(doc(db,"users",currentUser.uid));
   const userData = userSnap.exists() ? userSnap.data() : {};
 
-  // ✅ USER PROCESS ONLY (ADMIN FULL BYPASS)
-  if (!isAdmin && userData.kycStatus !== "APPROVED") {
+  if(!isAdmin && userData.kycStatus !== "APPROVED"){
     alert("KYC Pending ❌\nAdmin approve के बाद property add होगा ✅");
-    location.href = "kyc.html";
+    location.href="kyc.html";
     return;
   }
 
-  if (!isAdmin && userData.planStatus !== "ACTIVE") {
+  if(!isAdmin && userData.planStatus !== "ACTIVE"){
     alert("Plan required ❌\nPlan buy करके फिर add करो ✅");
-    location.href = "plans.html";
+    location.href="plans.html";
     return;
   }
 
-  // ✅ Photo compulsory
-  if (!finalWatermarkedBase64) {
-    alert("Photo required ❌");
+  // ✅ Photo required
+  if(!base64Photo && !(imageUrlInput.value || "").trim()){
+    alert("Photo compulsory ❌\nCamera/Gallery से photo select करो ✅");
     return;
   }
 
-  // ✅ GPS compulsory
-  if (!lat.value || !lng.value) {
-    alert("GPS required ❌\nपहले GPS Capture button दबाओ ✅");
+  // ✅ GPS required
+  if(!gpsLat || !gpsLng){
+    alert("GPS compulsory ❌\nपहले Capture GPS button दबाओ ✅");
     return;
   }
+
+  // Prefer Image URL if user provided, else base64
+  const finalImage = (imageUrlInput.value || "").trim() || base64Photo;
 
   const data = {
     uid: currentUser.uid,
@@ -207,21 +185,23 @@ form.onsubmit = async (e) => {
     price: document.getElementById("price").value.trim(),
     description: document.getElementById("description").value.trim(),
 
-    image: finalWatermarkedBase64, // ✅ Proof photo for admin verify
+    ownerName: document.getElementById("ownerName").value.trim(),
+    ownerPhone: document.getElementById("ownerPhone").value.trim(),
+
+    image: finalImage,
+
     city: city.value.trim(),
     state: state.value.trim(),
     locationAddress: locationAddress.value.trim(),
+    gps: { lat: gpsLat, lng: gpsLng },
 
-    gps: { lat: Number(lat.value), lng: Number(lng.value) },
-
-    // ✅ Admin process
     status: "PENDING",
     liveStatus: "EXPIRED",
     createdAt: serverTimestamp()
   };
 
-  await addDoc(collection(db, "properties"), data);
+  await addDoc(collection(db,"properties"), data);
 
   alert("✅ Property Submitted!\nAdmin approve के बाद LIVE होगी ✅");
-  location.href = "dashboard.html";
+  location.href="dashboard.html";
 };
