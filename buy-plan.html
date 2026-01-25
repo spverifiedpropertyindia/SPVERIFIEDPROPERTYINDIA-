@@ -35,13 +35,13 @@
     <h2>Select Plan</h2>
 
     <label>Select Role</label>
-    <select id="role">
+    <select id="role" onchange="payNowUPI()">
       <option value="OWNER">OWNER</option>
       <option value="BROKER">BROKER</option>
     </select>
 
     <label>Select Plan</label>
-    <select id="plan">
+    <select id="plan" onchange="payNowUPI()">
       <option value="BASIC">BASIC (28 Days)</option>
       <option value="STANDARD">STANDARD (56 Days)</option>
       <option value="PREMIUM">PREMIUM (84 Days)</option>
@@ -50,8 +50,11 @@
     <label>Amount (Auto)</label>
     <input id="amount" readonly />
 
+    <!-- ✅ Backup Button -->
     <div style="margin-top:12px;">
-      <button class="btn" style="width:100%;" onclick="generateQR()">Generate QR & Pay</button>
+      <button class="btn" style="width:100%;" onclick="generateQR()">
+        Generate QR & Pay (Backup)
+      </button>
     </div>
 
     <div id="payBox" style="margin-top:12px;"></div>
@@ -62,7 +65,7 @@
     <p class="small">Payment ke baad UTR submit karein. Admin approve karega.</p>
 
     <label>UTR / Transaction ID</label>
-    <input id="utr" placeholder="Enter UTR" />
+    <input id="utr" placeholder="Enter UTR (Minimum 10 digits)" />
 
     <button class="btn" style="width:100%;margin-top:12px;" onclick="submitPayment()">
       Submit For Approval
@@ -113,8 +116,7 @@
     amountInput.value = PRICES[role][plan];
   }
 
-  document.getElementById("role").onchange = updateAmount;
-  document.getElementById("plan").onchange = updateAmount;
+  // ✅ initial update
   updateAmount();
 
   listenUser(async (u)=>{
@@ -155,8 +157,65 @@
     }
   });
 
-  // ✅ Generate QR
+  // ✅ Payment Done helper focus
+  window.paymentDoneFocus = function(){
+    document.getElementById("utr").focus();
+    msg.innerHTML = "✅ Please enter UTR / Transaction ID and Submit for Approval.";
+  };
+
+  // ✅ Auto open UPI App on select plan/role (with confirm)
+  window.payNowUPI = function(){
+    updateAmount();
+
+    const role = document.getElementById("role").value;
+    const plan = document.getElementById("plan").value;
+    const amount = PRICES[role][plan];
+
+    // ✅ clear old QR box
+    payBox.innerHTML = "";
+
+    if(amount === 0){
+      msg.innerHTML = "✅ Free plan selected (No payment needed)";
+      return;
+    }
+
+    // ✅ Confirm Popup
+    const ok = confirm(`Pay ₹${amount} for ${role} - ${plan} Plan using UPI App?`);
+    if(!ok){
+      msg.innerHTML = "❌ Payment cancelled. You can use QR Backup button.";
+      return;
+    }
+
+    // ✅ UPI Deep Link
+    const note = `${role}-${plan}-Plan`;
+    const upiUrl = `upi://pay?pa=${UPI_ID}&pn=SP%20Verified%20Property%20India&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`;
+
+    msg.innerHTML = "⏳ Opening UPI App (PhonePe/GPay/Paytm)...";
+
+    // ✅ Show helper after opening
+    setTimeout(()=>{
+      payBox.innerHTML = `
+        <div style="text-align:center;">
+          <h3>✅ Payment Done?</h3>
+          <p class="small">Agar aapne payment kar diya hai to UTR/Transaction ID niche डालें.</p>
+          <button class="btn" style="width:100%;margin-top:10px;" onclick="paymentDoneFocus()">
+            ✅ I Have Paid (Enter UTR)
+          </button>
+          <p class="small" style="margin-top:8px;color:#777;">
+            Agar UPI app open nahi hua to नीचे "Generate QR & Pay (Backup)" use karein.
+          </p>
+        </div>
+      `;
+    }, 1200);
+
+    // ✅ open UPI app
+    window.location.href = upiUrl;
+  };
+
+  // ✅ Backup: Generate QR
   window.generateQR = function(){
+    updateAmount();
+
     const role = document.getElementById("role").value;
     const plan = document.getElementById("plan").value;
     const amount = PRICES[role][plan];
@@ -171,7 +230,8 @@
       return;
     }
 
-    const upiUrl = `upi://pay?pa=${UPI_ID}&pn=SP%20Verified%20Property%20India&am=${amount}&cu=INR`;
+    const note = `${role}-${plan}-Plan`;
+    const upiUrl = `upi://pay?pa=${UPI_ID}&pn=SP%20Verified%20Property%20India&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`;
     const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=" + encodeURIComponent(upiUrl);
 
     payBox.innerHTML = `
@@ -182,19 +242,37 @@
         <p class="small" style="color:#777;">✅ Payment ke baad UTR niche submit karein</p>
       </div>
     `;
-  }
+  };
 
-  // ✅ Submit UTR
+  // ✅ Submit UTR (Compulsory validation)
   window.submitPayment = async function(){
     if(!currentUser) return;
 
     const role = document.getElementById("role").value;
     const plan = document.getElementById("plan").value;
     const amount = PRICES[role][plan];
-    const utr = document.getElementById("utr").value.trim();
 
+    const utrInput = document.getElementById("utr");
+    const utr = utrInput.value.trim();
+
+    // ✅ Compulsory UTR
     if(!utr){
-      alert("UTR required!");
+      alert("❌ UTR required!");
+      utrInput.focus();
+      return;
+    }
+
+    // ✅ Only numbers
+    if(!/^\d+$/.test(utr)){
+      alert("❌ UTR must be numbers only!");
+      utrInput.focus();
+      return;
+    }
+
+    // ✅ Min 10 digits
+    if(utr.length < 10){
+      alert("❌ UTR minimum 10 digits compulsory!");
+      utrInput.focus();
       return;
     }
 
@@ -206,15 +284,15 @@
       amount,
       utr,
       upiId: UPI_ID,
-      paymentMode: "UPI_QR",
+      paymentMode: "UPI_APP_OR_QR",
       status: "PENDING",
       createdAt: serverTimestamp()
     });
 
     msg.innerHTML = "✅ Payment Submitted! Admin approval pending.";
-    document.getElementById("utr").value = "";
-  }
+    utrInput.value = "";
+  };
 </script>
 
 </body>
-</html>
+  </html>
