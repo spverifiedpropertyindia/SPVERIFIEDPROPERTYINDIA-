@@ -13,6 +13,7 @@
   <div class="menu">
     <a href="index.html">Home</a>
     <a href="dashboard.html">Dashboard</a>
+    <a href="admin.html" id="adminLink" style="display:none;">Admin</a>
   </div>
 </div>
 
@@ -26,6 +27,9 @@
       <button class="btn2" onclick="navigator.clipboard.writeText('8305070599@superyes')">Copy</button>
     </p>
   </div>
+
+  <!-- ✅ ADMIN MODE BOX -->
+  <div id="adminBox"></div>
 
   <div class="box" style="margin-top:14px;">
     <h2>Select Plan</h2>
@@ -68,12 +72,12 @@
   </div>
 
   <div class="footer">
-  ✅ WhatsApp Support:
-  <a href="https://wa.me/918305070599" target="_blank"><b>8305070599</b></a>
-  &nbsp; | &nbsp;
-  ✅ Support Email:
-  <a href="mailto:spverifiedproperty@gmail.com"><b>spverifiedproperty@gmail.com</b></a>
-</div>
+    ✅ WhatsApp Support:
+    <a href="https://wa.me/918305070599" target="_blank"><b>8305070599</b></a>
+    &nbsp; | &nbsp;
+    ✅ Support Email:
+    <a href="mailto:spverifiedproperty@gmail.com"><b>spverifiedproperty@gmail.com</b></a>
+  </div>
 
 </div>
 
@@ -87,11 +91,15 @@
     serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
+  const ADMIN_EMAIL = "raazsahu1000@gmail.com";
   const UPI_ID = "8305070599@superyes";
   let currentUser = null;
 
   const amountInput = document.getElementById("amount");
   const msg = document.getElementById("msg");
+
+  const adminBox = document.getElementById("adminBox");
+  const adminLink = document.getElementById("adminLink");
 
   const PRICES = {
     OWNER: { BASIC: 0, STANDARD: 299, PREMIUM: 499 },
@@ -114,8 +122,28 @@
       location.href="login.html";
       return;
     }
-    currentUser = u;
 
+    currentUser = u;
+    const isAdmin = (u.email === ADMIN_EMAIL);
+
+    // ✅ Admin UI
+    if(isAdmin){
+      if(adminLink) adminLink.style.display = "inline-block";
+      if(adminBox){
+        adminBox.innerHTML = `
+          <div class="box" style="margin-top:14px;">
+            <h3>🛡 ADMIN MODE ENABLED</h3>
+            <p class="small">
+              ✅ Admin ko KYC requirement nahi hai.<br/>
+              ✅ Admin full access ✅
+            </p>
+          </div>
+        `;
+      }
+      return; // ✅ STOP here (NO KYC CHECK)
+    }
+
+    // ✅ Normal user must have KYC approved
     const userSnap = await getDoc(doc(db,"users",u.uid));
     if(userSnap.exists()){
       const ud = userSnap.data();
@@ -174,4 +202,4 @@
 </script>
 
 </body>
-</html>
+  </html>
