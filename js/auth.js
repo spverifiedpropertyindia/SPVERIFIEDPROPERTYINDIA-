@@ -9,17 +9,19 @@ import {
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
-export async function loginWithGoogle() {
+// ✅ Mobile safe Google Login (Redirect)
+export async function googleLogin() {
   const provider = new GoogleAuthProvider();
   await signInWithRedirect(auth, provider);
 }
 
+// ✅ Redirect ke baad user get
 export async function handleRedirectLogin() {
   try {
-    const result = await getRedirectResult(auth);
-    return result?.user || null;
+    const res = await getRedirectResult(auth);
+    return res?.user || null;
   } catch (e) {
-    console.error("Redirect Login Error:", e);
+    console.error("Redirect login error:", e);
     return null;
   }
 }
@@ -30,4 +32,4 @@ export async function logout() {
 
 export function listenUser(cb) {
   return onAuthStateChanged(auth, (user) => cb(user));
-                            }
+}
