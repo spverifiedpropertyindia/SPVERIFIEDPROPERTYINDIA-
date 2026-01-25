@@ -41,20 +41,29 @@
       <label>ID Number</label>
       <input id="idNumber" required>
 
-      <!-- ✅ Upload fields (NO storage, only for user selection proof) -->
-      <label>PAN Card Photo (Optional)</label>
-      <input type="file" id="panPhoto" accept="image/*">
+      <!-- ✅ Upload fields (NOW COMPULSORY) -->
+      <label>PAN Card Photo (Required)</label>
+      <input type="file" id="panPhoto" accept="image/*" required>
 
-      <label>Aadhaar Front Photo (Optional)</label>
-      <input type="file" id="aadhaarFront" accept="image/*">
+      <label>Aadhaar Front Photo (Required)</label>
+      <input type="file" id="aadhaarFront" accept="image/*" required>
 
-      <label>Aadhaar Back Photo (Optional)</label>
-      <input type="file" id="aadhaarBack" accept="image/*">
+      <label>Aadhaar Back Photo (Required)</label>
+      <input type="file" id="aadhaarBack" accept="image/*" required>
 
-      <p class="small" style="margin-top:8px;color:#777;">
-        ⚠️ Note: Photo upload option hai, lekin server me save nahi hoga (Free version).
-        Aap WhatsApp pe documents bhej sakte ho.
-      </p>
+      <!-- ✅ WhatsApp Send Box + Button -->
+      <div style="margin-top:10px;padding:10px;border:1px dashed #ccc;border-radius:12px;background:#fff7e6;">
+        <p class="small" style="margin:0;">
+          ✅ <b>Important:</b> Photo upload compulsory hai ✅<br/>
+          ⚠️ Storage OFF hai, isliye photos yahan save/upload nahi hongi.<br/>
+          ✅ Documents WhatsApp par bhejna compulsory hai.
+        </p>
+      </div>
+
+      <button type="button" class="btn2" style="width:100%;margin-top:10px;"
+        onclick="window.open('https://wa.me/918305070599?text=Hello%20SP%20Verified%20Property%20India%2C%20Main%20KYC%20documents%20(PAN%20%2B%20Aadhaar)%20bhej%20raha%20hu.%20Please%20verify%20my%20KYC.','_blank')">
+        📤 Send PAN + Aadhaar on WhatsApp
+      </button>
 
       <button class="btn" style="margin-top:12px;width:100%;">Submit KYC</button>
     </form>
@@ -93,10 +102,15 @@
     e.preventDefault();
     if(!userData) return;
 
-    // ✅ only checking selected files (not uploading anywhere)
+    // ✅ Compulsory selection check
     const panSelected = document.getElementById("panPhoto").files.length > 0;
     const aadhaarFrontSelected = document.getElementById("aadhaarFront").files.length > 0;
     const aadhaarBackSelected = document.getElementById("aadhaarBack").files.length > 0;
+
+    if(!panSelected || !aadhaarFrontSelected || !aadhaarBackSelected){
+      alert("⚠️ PAN + Aadhaar Front + Aadhaar Back upload compulsory hai!");
+      return;
+    }
 
     await setDoc(doc(db, "kyc", userData.uid), {
       uid: userData.uid,
@@ -106,7 +120,7 @@
       idType: idType.value,
       idNumber: idNumber.value,
 
-      // ✅ just boolean info (no image storage)
+      // ✅ only boolean info (no image upload)
       panPhotoSelected: panSelected,
       aadhaarFrontSelected: aadhaarFrontSelected,
       aadhaarBackSelected: aadhaarBackSelected,
@@ -115,10 +129,10 @@
       createdAt: serverTimestamp()
     });
 
-    msg.innerHTML = "✅ KYC Submitted! Status: PENDING";
+    msg.innerHTML = "✅ KYC Submitted! अब PAN/Aadhaar WhatsApp पर जरूर भेजें ✅";
     form.reset();
   }
 </script>
 
 </body>
-  </html>
+        </html>
