@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>KYC - SP Verified Property India</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<div class="nav">
+  <div class="logo">📝 KYC Verification</div>
+  <div class="menu">
+    <a href="index.html">Home</a>
+    <a href="dashboard.html">Dashboard</a>
+  </div>
+</div>
+
+<div class="container">
+  <div class="box">
+    <h2>Submit KYC ✅</h2>
+    <p class="small">KYC submit ke baad Admin approve/reject karega.</p>
+
+    <form id="kycForm">
+      <label>Full Name</label>
+      <input id="fullName" required>
+
+      <label>Phone</label>
+      <input id="phone" required>
+
+      <label>Address</label>
+      <textarea id="address" required></textarea>
+
+      <label>ID Type</label>
+      <select id="idType" required>
+        <option value="Aadhaar">Aadhaar</option>
+        <option value="PAN">PAN</option>
+        <option value="Driving">Driving</option>
+      </select>
+
+      <label>ID Number</label>
+      <input id="idNumber" required>
+
+      <button class="btn" style="margin-top:12px;width:100%;">Submit KYC</button>
+    </form>
+
+    <p class="small" id="msg" style="margin-top:10px;"></p>
+  </div>
+
+  <div class="footer">
+  ✅ WhatsApp Support:
+  <a href="https://wa.me/918305070599" target="_blank"><b>8305070599</b></a>
+  &nbsp; | &nbsp;
+  ✅ Support Email:
+  <a href="mailto:spverifiedproperty@gmail.com"><b>spverifiedproperty@gmail.com</b></a>
+</div>
+</div>
+
+<script type="module">
+  import { db } from "./js/firebase.js";
+  import { listenUser } from "./js/auth.js";
+  import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+  const form = document.getElementById("kycForm");
+  const msg = document.getElementById("msg");
+  let userData = null;
+
+  listenUser((u)=>{
+    if(!u){
+      alert("Login required!");
+      location.href="login.html";
+      return;
+    }
+    userData = u;
+  });
+
+  form.onsubmit = async (e)=>{
+    e.preventDefault();
+    if(!userData) return;
+
+    await setDoc(doc(db, "kyc", userData.uid), {
+      uid: userData.uid,
+      fullName: fullName.value,
+      phone: phone.value,
+      address: address.value,
+      idType: idType.value,
+      idNumber: idNumber.value,
+      status: "PENDING",
+      createdAt: serverTimestamp()
+    });
+
+    msg.innerHTML = "✅ KYC Submitted! Status: PENDING";
+    form.reset();
+  }
+</script>
+
+</body>
+</html>

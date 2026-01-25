@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Login - SP Verified Property India</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+  <div class="nav">
+    <div class="logo">🏠 SP VERIFIED PROPERTY INDIA</div>
+    <div class="menu">
+      <a href="index.html">Home</a>
+      <a href="properties.html">Properties</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="box" style="max-width:520px;margin:auto;">
+      <h2>Login</h2>
+      <p class="small">Continue with Google. KYC + Plan required to add properties.</p>
+
+      <button class="btn" id="googleBtn" style="margin-top:14px;width:100%;">Continue with Google</button>
+    </div>
+  </div>
+
+  <div class="footer">
+  ✅ WhatsApp Support:
+  <a href="https://wa.me/918305070599" target="_blank"><b>8305070599</b></a>
+  &nbsp; | &nbsp;
+  ✅ Support Email:
+  <a href="mailto:spverifiedproperty@gmail.com"><b>spverifiedproperty@gmail.com</b></a>
+</div>
+
+  <script type="module">
+    import { googleLogin } from "./js/auth.js";
+    document.getElementById("googleBtn").onclick = async () => {
+      try{
+        await googleLogin();
+        location.href="dashboard.html";
+      }catch(e){
+        alert(e.message);
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+/* css/style.css */
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif;}
+body{background:#f5f7fb;color:#222;}
+a{text-decoration:none;color:inherit;}
+
+.nav{
+  background:#fff;
+  padding:15px 18px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  border-bottom:1px solid #eee;
+  position:sticky;top:0;z-index:9;
+}
+.nav .logo{font-weight:700;font-size:18px;color:#1e40af;}
+.nav .menu a{margin-left:12px;font-weight:600;font-size:14px;}
+.btn{
+  background:#1e40af;color:#fff;border:none;
+  padding:10px 14px;border-radius:10px;
+  cursor:pointer;font-weight:700;
+}
+.btn2{
+  background:#fff;color:#1e40af;border:1px solid #1e40af;
+  padding:10px 14px;border-radius:10px;
+  cursor:pointer;font-weight:700;
+}
+.container{max-width:1100px;margin:auto;padding:18px;}
+
+.hero{
+  background:#1e40af;
+  border-radius:16px;
+  color:#fff;
+  padding:22px;
+  margin-top:16px;
+}
+.hero h1{font-size:22px;margin-bottom:8px;}
+.hero p{opacity:.95;margin-bottom:14px;}
+.searchBox{
+  display:flex;gap:10px;flex-wrap:wrap;
+  margin-top:10px;
+}
+.input{
+  padding:11px 12px;border-radius:12px;border:0;
+  width:220px;max-width:100%;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:14px;
+  margin-top:16px;
+}
+
+.card{
+  background:#fff;border-radius:16px;
+  overflow:hidden;
+  box-shadow:0 6px 20px rgba(0,0,0,.06);
+  border:1px solid #eee;
+}
+.card img{width:100%;height:160px;object-fit:cover;}
+.card .p{padding:12px;}
+.badge{
+  display:inline-block;
+  background:#e0e7ff;color:#1e40af;
+  padding:5px 10px;border-radius:999px;
+  font-size:12px;font-weight:700;
+  margin-bottom:8px;
+}
+.price{font-size:18px;font-weight:800;margin:6px 0;}
+.small{font-size:13px;color:#555;}
+.footer{
+  text-align:center;
+  padding:20px;margin-top:20px;
+  color:#666;font-size:13px;
+}
+.box{
+  background:#fff;border:1px solid #eee;
+  padding:16px;border-radius:16px;
+  box-shadow:0 6px 20px rgba(0,0,0,.06);
+}
+.row{display:flex;gap:12px;flex-wrap:wrap;}
+.row .col{flex:1;min-width:250px;}
+label{font-size:13px;font-weight:700;color:#333;display:block;margin:10px 0 6px;}
+select,input,textarea{
+  width:100%;
+  padding:11px 12px;
+  border-radius:12px;
+  border:1px solid #ddd;
+  outline:none;
+}
+textarea{min-height:110px;resize:vertical;}
+
+/* ===== ADMIN PRO UI ===== */
+.topCards{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:14px;
+  margin-top:14px;
+}
+.stat{
+  background:linear-gradient(135deg,#1e40af,#2563eb);
+  color:#fff;
+  border-radius:18px;
+  padding:16px;
+  box-shadow:0 10px 25px rgba(30,64,175,.25);
+}
+.stat h3{font-size:14px;opacity:.9;margin-bottom:6px;}
+.stat .num{font-size:26px;font-weight:900;}
+
+.adminTabs{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:14px;
+}
+.tabBtn{
+  padding:10px 14px;
+  border-radius:12px;
+  border:1px solid #ddd;
+  background:#fff;
+  cursor:pointer;
+  font-weight:800;
+}
+.tabBtn.active{
+  border-color:#1e40af;
+  color:#1e40af;
+  box-shadow:0 8px 18px rgba(30,64,175,.12);
+}
+.hidden{display:none;}
+
+.actionRow{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+
+.btnRed{
+  background:#ef4444;
+  color:#fff;
+  border:none;
+  padding:10px 14px;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:800;
+}

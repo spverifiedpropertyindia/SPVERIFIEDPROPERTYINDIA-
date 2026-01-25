@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Admin Dashboard - SP Verified Property India</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+  <div class="nav">
+    <div class="logo">🛡 SP Admin Dashboard</div>
+    <div class="menu">
+      <a href="index.html">Home</a>
+      <a href="properties.html">Public Properties</a>
+      <button class="btn2" id="logoutBtn">Logout</button>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <div class="topCards">
+      <div class="stat"><h3>Pending KYC</h3><div class="num" id="kycCount">0</div></div>
+      <div class="stat"><h3>Pending Properties</h3><div class="num" id="propPendingCount">0</div></div>
+      <div class="stat"><h3>Approved Properties</h3><div class="num" id="propApprovedCount">0</div></div>
+    </div>
+
+    <div class="adminTabs">
+      <button class="tabBtn active" data-tab="kycTab">KYC Requests</button>
+      <button class="tabBtn" data-tab="paymentTab">Payments</button>
+      <button class="tabBtn" data-tab="propertyTab">Pending Properties</button>
+      <button class="tabBtn" data-tab="approvedTab">Approved Properties</button>
+      <button class="tabBtn" data-tab="addTab">Add Property</button>
+    </div>
+
+    <div class="box" id="kycTab">
+      <h2>✅ KYC Pending Requests</h2>
+      <div class="grid" id="kycList"></div>
+    </div>
+
+    <div class="box hidden" id="paymentTab">
+      <h2>💰 Plan Payments (Approve/Reject)</h2>
+      <div class="grid" id="paymentList"></div>
+    </div>
+
+    <div class="box hidden" id="propertyTab">
+      <h2>🏠 Pending Properties (Approve/Reject)</h2>
+      <div class="grid" id="pendingProps"></div>
+    </div>
+
+    <div class="box hidden" id="approvedTab">
+      <h2>🌍 Approved Public Properties</h2>
+      <div class="grid" id="approvedProps"></div>
+    </div>
+
+    <div class="box hidden" id="addTab">
+      <h2>➕ Add New Property (Admin)</h2>
+
+      <form id="form">
+        <div class="row">
+          <div class="col">
+            <label>Title</label>
+            <input id="title" required />
+          </div>
+          <div class="col">
+            <label>City</label>
+            <input id="city" required />
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col">
+            <label>State</label>
+            <input id="state" />
+          </div>
+          <div class="col">
+            <label>Type</label>
+            <select id="type" required>
+              <option value="House">House</option>
+              <option value="Flat">Flat</option>
+              <option value="Plot">Plot</option>
+              <option value="Commercial">Commercial</option>
+              <option value="Rent">Rent</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col">
+            <label>Price</label>
+            <input id="price" required />
+          </div>
+          <div class="col">
+            <label>Property Image URL</label>
+            <input id="image" />
+          </div>
+        </div>
+
+        <label>Description</label>
+        <textarea id="description" required></textarea>
+
+        <div class="row">
+          <div class="col">
+            <label>Owner Name</label>
+            <input id="ownerName" />
+          </div>
+          <div class="col">
+            <label>Owner Phone</label>
+            <input id="ownerPhone" />
+          </div>
+        </div>
+
+        <button class="btn" style="margin-top:12px;width:100%;">Save Property</button>
+      </form>
+    </div>
+
+    <div class="footer">
+  ✅ WhatsApp Support:
+  <a href="https://wa.me/918305070599" target="_blank"><b>8305070599</b></a>
+  &nbsp; | &nbsp;
+  ✅ Support Email:
+  <a href="mailto:spverifiedproperty@gmail.com"><b>spverifiedproperty@gmail.com</b></a>
+</div>
+
+  </div>
+
+  <script type="module" src="js/admin-pro.js"></script>
+</body>
+</html>

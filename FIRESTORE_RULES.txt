@@ -1,0 +1,38 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isLoggedIn(){
+      return request.auth != null;
+    }
+
+    function isAdmin(){
+      return isLoggedIn() && request.auth.token.email == "raazsahu1000@gmail.com";
+    }
+
+    match /users/{uid}{
+      allow read: if isLoggedIn() && request.auth.uid == uid;
+      allow create: if isLoggedIn() && request.auth.uid == uid;
+      allow update: if isAdmin();
+    }
+
+    match /kyc/{uid}{
+      allow create: if isLoggedIn() && request.auth.uid == uid;
+      allow read: if isAdmin() || (isLoggedIn() && request.auth.uid == uid);
+      allow update: if isAdmin();
+    }
+
+    match /payments/{id}{
+      allow create: if isLoggedIn();
+      allow read: if isAdmin() || (isLoggedIn() && request.auth.uid == resource.data.uid);
+      allow update: if isAdmin();
+    }
+
+    match /properties/{id}{
+      allow read: if resource.data.status == "APPROVED" &&
+                  resource.data.liveStatus == "LIVE";
+      allow create: if isLoggedIn();
+      allow update, delete: if isAdmin();
+    }
+  }
+}

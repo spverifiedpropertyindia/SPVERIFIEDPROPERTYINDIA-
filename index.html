@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>SP Verified Property India</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+  <div class="nav">
+    <div class="logo">🏠 SP VERIFIED PROPERTY INDIA</div>
+    <div class="menu">
+      <a href="index.html">Home</a>
+      <a href="properties.html">Properties</a>
+      <a href="plans.html">Plans</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="login.html" id="loginLink">Login</a>
+      <a href="admin.html" id="adminLink" style="display:none;">Admin</a>
+      <button class="btn2" id="logoutBtn" style="display:none;">Logout</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="hero">
+      <h1>Find Verified Properties in India ✅</h1>
+      <p>Only approved + live listings are shown publicly.</p>
+
+      <div class="searchBox">
+        <input class="input" id="city" placeholder="City (e.g. Raipur)"/>
+        <select class="input" id="type">
+          <option value="">All Types</option>
+          <option value="Plot">Plot</option>
+          <option value="House">House</option>
+          <option value="Flat">Flat</option>
+          <option value="Commercial">Commercial</option>
+          <option value="Rent">Rent</option>
+        </select>
+        <button class="btn" id="searchBtn">Search</button>
+      </div>
+    </div>
+
+    <h2 style="margin-top:18px;">🔥 Latest Approved Properties</h2>
+    <div class="grid" id="list"></div>
+  </div>
+
+  <div class="footer">
+  ✅ WhatsApp Support:
+  <a href="https://wa.me/918305070599" target="_blank"><b>8305070599</b></a>
+  &nbsp; | &nbsp;
+  ✅ Support Email:
+  <a href="mailto:spverifiedproperty@gmail.com"><b>spverifiedproperty@gmail.com</b></a>
+</div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

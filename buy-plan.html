@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Buy Plan - SP Verified Property India</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<div class="nav">
+  <div class="logo">💳 Buy Plan</div>
+  <div class="menu">
+    <a href="index.html">Home</a>
+    <a href="dashboard.html">Dashboard</a>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="box">
+    <h2>✅ Plans Validity</h2>
+    <p class="small">✅ BASIC = 28 days | ✅ STANDARD = 56 days | ✅ PREMIUM = 84 days</p>
+    <p class="small" style="margin-top:8px;">
+      UPI ID: <b>8305070599@superyes</b>
+      <button class="btn2" onclick="navigator.clipboard.writeText('8305070599@superyes')">Copy</button>
+    </p>
+  </div>
+
+  <div class="box" style="margin-top:14px;">
+    <h2>Select Plan</h2>
+
+    <label>Select Role</label>
+    <select id="role">
+      <option value="OWNER">OWNER</option>
+      <option value="BROKER">BROKER</option>
+    </select>
+
+    <label>Select Plan</label>
+    <select id="plan">
+      <option value="BASIC">BASIC (28 Days)</option>
+      <option value="STANDARD">STANDARD (56 Days)</option>
+      <option value="PREMIUM">PREMIUM (84 Days)</option>
+    </select>
+
+    <label>Amount (Auto)</label>
+    <input id="amount" readonly />
+
+    <div style="margin-top:12px;">
+      <button class="btn" style="width:100%;" onclick="generateQR()">Generate QR & Pay</button>
+    </div>
+
+    <div id="payBox" style="margin-top:12px;"></div>
+
+    <hr style="margin:14px 0;border:0;border-top:1px solid #eee;"/>
+
+    <h2>Submit Transaction (UTR)</h2>
+    <p class="small">Payment ke baad UTR submit karein. Admin approve karega.</p>
+
+    <label>UTR / Transaction ID</label>
+    <input id="utr" placeholder="Enter UTR" />
+
+    <button class="btn" style="width:100%;margin-top:12px;" onclick="submitPayment()">
+      Submit For Approval
+    </button>
+
+    <p class="small" id="msg" style="margin-top:10px;"></p>
+  </div>
+
+  <div class="footer">
+  ✅ WhatsApp Support:
+  <a href="https://wa.me/918305070599" target="_blank"><b>8305070599</b></a>
+  &nbsp; | &nbsp;
+  ✅ Support Email:
+  <a href="mailto:spverifiedproperty@gmail.com"><b>spverifiedproperty@gmail.com</b></a>
+</div>
+
+</div>
+
+<script type="module">
+  import { db } from "./js/firebase.js";
+  import { listenUser } from "./js/auth.js";
+
+  import {
+    doc, getDoc,
+    addDoc, collection,
+    serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+  const UPI_ID = "8305070599@superyes";
+  let currentUser = null;
+
+  const amountInput = document.getElementById("amount");
+  const msg = document.getElementById("msg");
+
+  const PRICES = {
+    OWNER: { BASIC: 0, STANDARD: 299, PREMIUM: 499 },
+    BROKER:{ BASIC: 0, STANDARD: 499, PREMIUM: 699 }
+  };
+
+  function updateAmount(){
+    const role = document.getElementById("role").value;
+    const plan = document.getElementById("plan").value;
+    amountInput.value = PRICES[role][plan];
+  }
+
+  document.getElementById("role").onchange = updateAmount;
+  document.getElementById("plan").onchange = updateAmount;
+  updateAmount();
+
+  listenUser(async (u)=>{
+    if(!u){
+      alert("Login required!");
+      location.href="login.html";
+      return;
+    }
+    currentUser = u;
+
+    const userSnap = await getDoc(doc(db,"users",u.uid));
+    if(userSnap.exists()){
+      const ud = userSnap.data();
+      if(ud.kycStatus !== "APPROVED"){
+        alert("KYC not approved! Pehle KYC approve karvao.");
+        location.href="kyc.html";
+      }
+    }
+  });
+
+  window.generateQR = function(){
+    const role = document.getElementById("role").value;
+    const plan = document.getElementById("plan").value;
+    const amount = PRICES[role][plan];
+
+    const upiUrl = `upi://pay?pa=${UPI_ID}&pn=SP%20Verified%20Property%20India&am=${amount}&cu=INR`;
+    const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=" + encodeURIComponent(upiUrl);
+
+    document.getElementById("payBox").innerHTML = `
+      <div style="text-align:center;">
+        <h3>Scan & Pay ₹${amount}</h3>
+        <img src="${qrUrl}" style="border-radius:16px;border:1px solid #eee;margin-top:10px;" />
+        <p class="small" style="margin-top:8px;"><b>UPI:</b> ${UPI_ID}</p>
+      </div>
+    `;
+  }
+
+  window.submitPayment = async function(){
+    if(!currentUser) return;
+
+    const role = document.getElementById("role").value;
+    const plan = document.getElementById("plan").value;
+    const amount = PRICES[role][plan];
+    const utr = document.getElementById("utr").value.trim();
+
+    if(!utr){
+      alert("UTR required!");
+      return;
+    }
+
+    await addDoc(collection(db,"payments"),{
+      uid: currentUser.uid,
+      email: currentUser.email,
+      role,
+      plan,
+      amount,
+      utr,
+      upiId: UPI_ID,
+      status: "PENDING",
+      createdAt: serverTimestamp()
+    });
+
+    msg.innerHTML = "✅ Payment Submitted! Admin approval pending.";
+    document.getElementById("utr").value = "";
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Property Details</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+  <div class="nav">
+    <div class="logo">🏠 SP VERIFIED PROPERTY INDIA</div>
+    <div class="menu">
+      <a href="index.html">Home</a>
+      <a href="properties.html">Properties</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="box" id="details">Loading...</div>
+  </div>
+
+  <div class="footer">
+  ✅ WhatsApp Support:
+  <a href="https://wa.me/918305070599" target="_blank"><b>8305070599</b></a>
+  &nbsp; | &nbsp;
+  ✅ Support Email:
+  <a href="mailto:spverifiedproperty@gmail.com"><b>spverifiedproperty@gmail.com</b></a>
+</div>
+
+  <script type="module">
+    import { db } from "./js/firebase.js";
+    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+    const id = new URLSearchParams(location.search).get("id");
+    const div = document.getElementById("details");
+
+    async function load(){
+      if(!id){ div.innerHTML="Invalid property"; return; }
+
+      const snap = await getDoc(doc(db, "properties", id));
+      if(!snap.exists()){ div.innerHTML="Not found"; return; }
+
+      const p = snap.data();
+
+      const mapBtn = (p.gps && p.gps.lat && p.gps.lng)
+        ? `<a class="btn2" target="_blank" href="https://www.google.com/maps?q=${p.gps.lat},${p.gps.lng}" style="display:inline-block;margin-top:10px;">📍 Open Map</a>`
+        : "";
+
+      div.innerHTML = `
+        <h2>${p.title || "Property"}</h2>
+        <p class="small">${p.city || ""} • ${p.state || ""} • ${p.type || ""}</p>
+        <div style="margin-top:10px;">
+          <span class="badge">${p.status || ""} • ${p.liveStatus || ""}</span>
+        </div>
+
+        <img src="${p.image || 'https://picsum.photos/900/500'}"
+             style="width:100%;border-radius:16px;margin-top:12px;border:1px solid #eee;" />
+
+        <h3 class="price">₹ ${p.price || "N/A"}</h3>
+        <p style="margin-top:10px;">${p.description || ""}</p>
+
+        <hr style="margin:14px 0;border:0;border-top:1px solid #eee;"/>
+
+        <p class="small"><b>Owner:</b> ${p.ownerName || "N/A"}</p>
+        <p class="small"><b>Phone:</b> ${p.ownerPhone || "N/A"}</p>
+
+        ${mapBtn}
+      `;
+    }
+    load();
+  </script>
+</body>
+</html>

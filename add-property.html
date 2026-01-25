@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Add Property - SP Verified Property India</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<div class="nav">
+  <div class="logo">➕ Add Property</div>
+  <div class="menu">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="properties.html">Public Properties</a>
+  </div>
+</div>
+
+<div class="container">
+  <div class="box">
+    <h2>Submit Property ✅</h2>
+    <p class="small">Property submit karne ke baad PENDING me rahegi. Admin approve karega.</p>
+
+    <p class="small" id="warning" style="margin-top:10px;"></p>
+
+    <form id="propForm">
+      <div class="row">
+        <div class="col">
+          <label>Title</label>
+          <input id="title" required placeholder="2BHK Flat in Raipur"/>
+        </div>
+        <div class="col">
+          <label>Type</label>
+          <select id="type" required>
+            <option value="House">House</option>
+            <option value="Flat">Flat</option>
+            <option value="Plot">Plot</option>
+            <option value="Commercial">Commercial</option>
+            <option value="Rent">Rent</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <label>Price</label>
+          <input id="price" required placeholder="1500000"/>
+        </div>
+        <div class="col">
+          <label>Date & Time (Auto)</label>
+          <input id="dateTime" readonly />
+        </div>
+      </div>
+
+      <label>Property Image URL (Compulsory)</label>
+      <input id="image" required placeholder="Paste image link (Postimages/Imgbb/Drive link)" />
+
+      <div class="actionRow">
+        <button type="button" class="btn2" onclick="openCamera()">📷 Open Camera</button>
+        <a class="btn2" target="_blank" href="https://postimages.org/">⬆ Upload Photo Free</a>
+      </div>
+
+      <p class="small" style="margin-top:8px;">
+        ✅ Photo click करें → postimages.org pe upload करें → Direct Link copy करके ऊपर paste करें.
+        Photo link nahi hai? WhatsApp pe भेज दो:
+        <a href="https://wa.me/918305070599" target="_blank"><b>8305070599</b></a>
+      </p>
+
+      <label>GPS Location (Compulsory)</label>
+      <button type="button" class="btn" onclick="captureGPS()">📍 Capture GPS</button>
+      <p class="small" id="gpsText" style="margin-top:8px;">GPS not captured ❌</p>
+
+      <label>City (Auto from GPS)</label>
+      <input id="city" required readonly placeholder="Auto City will appear here"/>
+
+      <label>State (Auto from GPS)</label>
+      <input id="state" required readonly placeholder="Auto State will appear here"/>
+
+      <label>Location Address (Auto from GPS)</label>
+      <textarea id="locationAddress" required readonly placeholder="Auto Address will appear here"></textarea>
+
+      <label>Description</label>
+      <textarea id="description" required placeholder="Full property details..."></textarea>
+
+      <div class="row">
+        <div class="col">
+          <label>Owner Name</label>
+          <input id="ownerName" required placeholder="Your name"/>
+        </div>
+        <div class="col">
+          <label>Owner Phone</label>
+          <input id="ownerPhone" required placeholder="8305070599"/>
+        </div>
+      </div>
+
+      <button class="btn" style="margin-top:12px;width:100%;">Submit Property</button>
+    </form>
+  </div>
+
+  <div class="footer">
+  ✅ WhatsApp Support:
+  <a href="https://wa.me/918305070599" target="_blank"><b>8305070599</b></a>
+  &nbsp; | &nbsp;
+  ✅ Support Email:
+  <a href="mailto:spverifiedproperty@gmail.com"><b>spverifiedproperty@gmail.com</b></a>
+</div>
+</div>
+
+<script type="module" src="js/add-property.js"></script>
+</body>
+</html>
