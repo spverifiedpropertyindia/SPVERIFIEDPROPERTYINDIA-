@@ -51,7 +51,8 @@
     <input id="amount" readonly />
 
     <div style="margin-top:12px;">
-      <button class="btn" style="width:100%;" onclick="generateQR()">Generate QR & Pay</button>
+      <!-- ✅ Now opens Razorpay -->
+      <button class="btn" style="width:100%;" onclick="payNow()">Pay Now (Razorpay)</button>
     </div>
 
     <div id="payBox" style="margin-top:12px;"></div>
@@ -62,7 +63,7 @@
     <p class="small">Payment ke baad UTR submit karein. Admin approve karega.</p>
 
     <label>UTR / Transaction ID</label>
-    <input id="utr" placeholder="Enter UTR" />
+    <input id="utr" placeholder="Enter UTR / Razorpay Payment ID" />
 
     <button class="btn" style="width:100%;margin-top:12px;" onclick="submitPayment()">
       Submit For Approval
@@ -81,6 +82,9 @@
 
 </div>
 
+<!-- ✅ Razorpay Checkout -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
 <script type="module">
   import { db } from "./js/firebase.js";
   import { listenUser } from "./js/auth.js";
@@ -92,11 +96,18 @@
   } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
   const ADMIN_EMAIL = "raazsahu1000@gmail.com";
+
+  // ✅ Razorpay Key ID (aapne diya)
+  const RAZORPAY_KEY = "S7IlZ9gUrb0Zny";
+
+  // ✅ UPI (Optional)
   const UPI_ID = "8305070599@superyes";
+
   let currentUser = null;
 
   const amountInput = document.getElementById("amount");
   const msg = document.getElementById("msg");
+  const payBox = document.getElementById("payBox");
 
   const adminBox = document.getElementById("adminBox");
   const adminLink = document.getElementById("adminLink");
@@ -154,23 +165,57 @@
     }
   });
 
-  window.generateQR = function(){
+  // ✅ Razorpay open
+  window.payNow = function(){
     const role = document.getElementById("role").value;
     const plan = document.getElementById("plan").value;
     const amount = PRICES[role][plan];
 
-    const upiUrl = `upi://pay?pa=${UPI_ID}&pn=SP%20Verified%20Property%20India&am=${amount}&cu=INR`;
-    const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=" + encodeURIComponent(upiUrl);
+    msg.innerHTML = "";
 
-    document.getElementById("payBox").innerHTML = `
+    if(amount === 0){
+      payBox.innerHTML = `
+        <div style="text-align:center;">
+          <h3>✅ Free Plan Selected</h3>
+          <p class="small">Payment required nahi hai.</p>
+        </div>
+      `;
+      return;
+    }
+
+    payBox.innerHTML = `
       <div style="text-align:center;">
-        <h3>Scan & Pay ₹${amount}</h3>
-        <img src="${qrUrl}" style="border-radius:16px;border:1px solid #eee;margin-top:10px;" />
-        <p class="small" style="margin-top:8px;"><b>UPI:</b> ${UPI_ID}</p>
+        <p class="small">⏳ Opening Razorpay...</p>
       </div>
     `;
+
+    var options = {
+      key: RAZORPAY_KEY,
+      amount: amount * 100,
+      currency: "INR",
+      name: "SP Verified Property India",
+      description: `${role} - ${plan}`,
+      handler: function (response) {
+        alert("✅ Payment Success: " + response.razorpay_payment_id);
+
+        // ✅ Auto fill UTR box
+        document.getElementById("utr").value = response.razorpay_payment_id;
+
+        payBox.innerHTML = `
+          <div style="text-align:center;">
+            <h3>✅ Payment Done</h3>
+            <p class="small">अब नीचे UTR Submit कर दें ✅</p>
+          </div>
+        `;
+      },
+      theme: { color: "#000000" }
+    };
+
+    var rzp1 = new Razorpay(options);
+    rzp1.open();
   }
 
+  // ✅ Submit payment entry to Firestore (Admin Approval)
   window.submitPayment = async function(){
     if(!currentUser) return;
 
@@ -180,7 +225,7 @@
     const utr = document.getElementById("utr").value.trim();
 
     if(!utr){
-      alert("UTR required!");
+      alert("UTR / Razorpay Payment ID required!");
       return;
     }
 
@@ -192,6 +237,7 @@
       amount,
       utr,
       upiId: UPI_ID,
+      paymentMode: "RAZORPAY",
       status: "PENDING",
       createdAt: serverTimestamp()
     });
