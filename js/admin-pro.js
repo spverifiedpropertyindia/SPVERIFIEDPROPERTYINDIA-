@@ -5,7 +5,8 @@ import {
   collection, query, orderBy, onSnapshot,
   doc, getDoc, updateDoc, setDoc,
   deleteDoc,
-  serverTimestamp
+  serverTimestamp,
+  where, getDocs, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const ADMIN_EMAIL = "raazsahu1000@gmail.com";
@@ -246,7 +247,6 @@ async function approvePayment(paymentDocId, paymentData){
   const amount = paymentData.amount || 0;
 
   const days = PLAN_DAYS[plan] || 0;
-
   const expiry = addDaysToDate(new Date(), days);
 
   // ✅ Mark payment as approved
@@ -267,6 +267,9 @@ async function approvePayment(paymentDocId, paymentData){
     lastPaymentId: paymentDocId,
     updatedAt: serverTimestamp()
   }, { merge: true });
+
+  // ✅ NEW FEATURE: Payment approve होते ही EXPIRED properties फिर से LIVE
+  await reviveUserProperties(uid);
 
   alert(`✅ Payment Approved!\nPlan Activated: ${plan}\nExpiry: ${formatDate(expiry)}`);
 }
@@ -428,4 +431,32 @@ function initAddPropertyForm(){
     alert("✅ Property Added Successfully!");
     form.reset();
   };
+}
+
+// ✅ NEW FEATURE FUNCTION: Payment approve ke baad expired properties revive
+async function reviveUserProperties(uid){
+  try{
+    const q = query(
+      collection(db, "properties"),
+      where("uid", "==", uid),
+      where("status", "==", "EXPIRED")
+    );
+
+    const snap = await getDocs(q);
+    if(snap.empty) return;
+
+    const batch = writeBatch(db);
+
+    snap.forEach((d)=>{
+      batch.update(doc(db, "properties", d.id), {
+        status: "APPROVED",
+        revivedAt: new Date().toISOString()
+      });
+    });
+
+    await batch.commit();
+    console.log("✅ Auto Revived properties (plan active)");
+  }catch(err){
+    console.log("❌ Revive error:", err);
   }
+}
