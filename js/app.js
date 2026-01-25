@@ -62,10 +62,12 @@ async function loadProperties(){
   if(!listDiv) return;
   listDiv.innerHTML = "Loading...";
 
+  // ✅ ONLY LIVE PUBLIC PROPERTIES:
+  // ✅ APPROVED = show
+  // ❌ EXPIRED/PENDING/REJECTED = hide automatically
   let q = query(
     collection(db, "properties"),
     where("status", "==", "APPROVED"),
-    where("liveStatus", "==", "LIVE"),
     orderBy("createdAt", "desc"),
     limit(30)
   );
@@ -78,8 +80,13 @@ async function loadProperties(){
   let html = "";
   snap.forEach((d)=>{
     const p = d.data();
+
+    // ✅ Extra safety (अगर कहीं गलत data हो)
+    if(p.status !== "APPROVED") return;
+
     if(city && (p.city || "").toLowerCase() !== city.toLowerCase()) return;
     if(type && (p.type || "") !== type) return;
+
     html += cardHTML(d.id, p);
   });
 
