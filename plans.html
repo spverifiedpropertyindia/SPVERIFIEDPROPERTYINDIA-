@@ -14,15 +14,19 @@
       <a href="properties.html">Properties</a>
       <a href="buy-plan.html">Buy Plan</a>
       <a href="dashboard.html">Dashboard</a>
+      <a href="admin.html" id="adminLink" style="display:none;">Admin</a>
     </div>
   </div>
 
-  <div class="container">
+  <div class="container" id="mainContainer">
     <div class="box">
       <h2>✅ Plan Validity Fixed</h2>
       <p class="small">✅ BASIC = 28 days | ✅ STANDARD = 56 days | ✅ PREMIUM = 84 days</p>
       <p class="small" style="margin-top:8px;">UPI ID: <b>8305070599@superyes</b></p>
     </div>
+
+    <!-- ✅ Admin message box -->
+    <div id="adminBox"></div>
 
     <div class="grid">
       <div class="card"><div class="p"><div class="badge">OWNER BASIC</div><h3>Free</h3><p class="small">1 listing/month • 28 days</p></div></div>
@@ -38,12 +42,42 @@
     </div>
 
     <div class="footer">
-  ✅ WhatsApp Support:
-  <a href="https://wa.me/918305070599" target="_blank"><b>8305070599</b></a>
-  &nbsp; | &nbsp;
-  ✅ Support Email:
-  <a href="mailto:spverifiedproperty@gmail.com"><b>spverifiedproperty@gmail.com</b></a>
-</div>
+      ✅ WhatsApp Support:
+      <a href="https://wa.me/918305070599" target="_blank"><b>8305070599</b></a>
+      &nbsp; | &nbsp;
+      ✅ Support Email:
+      <a href="mailto:spverifiedproperty@gmail.com"><b>spverifiedproperty@gmail.com</b></a>
+    </div>
   </div>
+
+  <!-- ✅ ADMIN BYPASS SCRIPT -->
+  <script type="module">
+    import { listenUser } from "./js/auth.js";
+
+    const ADMIN_EMAIL = "raazsahu1000@gmail.com";
+
+    const adminBox = document.getElementById("adminBox");
+    const adminLink = document.getElementById("adminLink");
+
+    listenUser((user)=>{
+      if(!user) return;
+
+      if(user.email === ADMIN_EMAIL){
+        if(adminLink) adminLink.style.display = "inline-block";
+        if(adminBox){
+          adminBox.innerHTML = `
+            <div class="box" style="margin-top:14px;">
+              <h3>🛡 ADMIN MODE ENABLED</h3>
+              <p class="small">
+                ✅ Admin ko KYC / Plan restriction apply नहीं होता.<br/>
+                ✅ Admin full access: Plans, Buy Plan, Add Property, Approvals ✅
+              </p>
+            </div>
+          `;
+        }
+      }
+    });
+  </script>
+
 </body>
-</html>
+  </html>
