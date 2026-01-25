@@ -5,8 +5,12 @@ import { listenUser } from "./auth.js";
 import {
   collection,
   addDoc,
+  doc,
+  getDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+const ADMIN_EMAIL = "raazsahu1000@gmail.com";
 
 const form = document.getElementById("propForm");
 
@@ -23,22 +27,10 @@ const lng = document.getElementById("lng");
 let currentUser = null;
 let finalWatermarkedBase64 = "";
 
-// ✅ Login check
-listenUser((u)=>{
-  if(!u){
-    alert("Login required ✅");
-    location.href="login.html";
-    return;
-  }
-  currentUser = u;
-});
-
 // ✅ Date/Time String
-function getDateTimeString(){
+function getDateTimeString() {
   const now = new Date();
-  const d = now.toLocaleDateString();
-  const t = now.toLocaleTimeString();
-  return `${d} ${t}`;
+  return now.toLocaleDateString() + " " + now.toLocaleTimeString();
 }
 
 // ✅ Watermark function
@@ -52,10 +44,10 @@ async function addWatermarkToBase64(base64, textLines = []) {
       canvas.width = img.width;
       canvas.height = img.height;
 
-      // draw original photo
+      // Draw original
       ctx.drawImage(img, 0, 0);
 
-      // watermark background strip
+      // Watermark strip
       const padding = Math.max(18, Math.floor(img.width * 0.02));
       const lineHeight = Math.max(30, Math.floor(img.width * 0.03));
       const stripHeight = (textLines.length * lineHeight) + padding;
@@ -63,13 +55,13 @@ async function addWatermarkToBase64(base64, textLines = []) {
       ctx.fillStyle = "rgba(0,0,0,0.55)";
       ctx.fillRect(0, canvas.height - stripHeight, canvas.width, stripHeight);
 
-      // watermark text
+      // Text
       ctx.fillStyle = "#fff";
       ctx.font = `bold ${Math.max(18, Math.floor(img.width * 0.028))}px Arial`;
       ctx.textBaseline = "top";
 
       let y = canvas.height - stripHeight + Math.floor(padding * 0.5);
-      for(const line of textLines){
+      for (const line of textLines) {
         ctx.fillText(line, padding, y);
         y += lineHeight;
       }
@@ -83,47 +75,64 @@ async function addWatermarkToBase64(base64, textLines = []) {
   });
 }
 
-// ✅ GPS capture
-gpsBtn.onclick = ()=>{
-  if(!navigator.geolocation){
+// ✅ Login check
+listenUser((u) => {
+  if (!u) {
+    alert("Login required ✅");
+    location.href = "login.html";
+    return;
+  }
+  currentUser = u;
+});
+
+// ✅ GPS capture (COMPULSORY)
+gpsBtn.onclick = () => {
+  if (!navigator.geolocation) {
     alert("GPS not supported ❌");
     return;
   }
 
   gpsBtn.innerText = "Getting GPS...";
+
   navigator.geolocation.getCurrentPosition(
-    (pos)=>{
+    (pos) => {
       lat.value = pos.coords.latitude;
       lng.value = pos.coords.longitude;
 
-      // ✅ fallback autofill (manual allowed)
-      if(!city.value) city.value = "Fill City";
-      if(!state.value) state.value = "Fill State";
-      if(!locationAddress.value) locationAddress.value = `Lat:${lat.value}, Lng:${lng.value}`;
+      // ✅ fallback auto text (manual allowed but gps compulsory)
+      if (!city.value) city.value = "Fill City";
+      if (!state.value) state.value = "Fill State";
+      if (!locationAddress.value) {
+        locationAddress.value = `Lat:${lat.value}, Lng:${lng.value}`;
+      }
 
       gpsBtn.innerText = "✅ GPS Captured";
     },
-    ()=>{
+    () => {
       gpsBtn.innerText = "📍 Capture GPS";
-      alert("GPS permission denied ❌\nAllow location OR fill manually ✅");
+      alert("GPS permission denied ❌\nLocation Allow करो ✅");
     },
-    { enableHighAccuracy:true, timeout:15000 }
+    { enableHighAccuracy: true, timeout: 15000 }
   );
 };
 
-// ✅ Photo capture -> Base64 -> Watermark
-photoFile.addEventListener("change", async ()=>{
+// ✅ Photo capture -> watermark preview
+photoFile.addEventListener("change", async () => {
   const file = photoFile.files?.[0];
-  if(!file) return;
+  if (!file) return;
 
   const reader = new FileReader();
 
-  reader.onload = async ()=>{
-    try{
+  reader.onload = async () => {
+    try {
       const base64 = reader.result;
 
       const dt = getDateTimeString();
-      const gpsText = (lat.value && lng.value) ? `GPS: ${lat.value}, ${lng.value}` : "GPS: Not Captured";
+      const gpsText =
+        (lat.value && lng.value)
+          ? `GPS: ${lat.value}, ${lng.value}`
+          : "GPS: Not Captured";
+
       const cityState = `City/State: ${city.value || "-"}, ${state.value || "-"}`;
 
       const lines = [
@@ -138,9 +147,9 @@ photoFile.addEventListener("change", async ()=>{
       previewBox.innerHTML = `
         <img src="${finalWatermarkedBase64}"
              style="width:100%;max-height:240px;object-fit:cover;border-radius:16px;border:1px solid #eee;">
-        <p class="small" style="margin-top:8px;">✅ Watermark Applied (Date/Time/GPS)</p>
+        <p class="small" style="margin-top:8px;">✅ Watermark Applied</p>
       `;
-    }catch(e){
+    } catch (e) {
       console.error(e);
       alert("Watermark error ❌");
     }
@@ -149,17 +158,43 @@ photoFile.addEventListener("change", async ()=>{
   reader.readAsDataURL(file);
 });
 
-// ✅ Submit
-form.onsubmit = async (e)=>{
+// ✅ Submit property
+form.onsubmit = async (e) => {
   e.preventDefault();
 
-  if(!finalWatermarkedBase64){
+  if (!currentUser) {
+    alert("Login required ❌");
+    return;
+  }
+
+  const isAdmin = currentUser.email === ADMIN_EMAIL;
+
+  // ✅ User document
+  const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+  const userData = userSnap.exists() ? userSnap.data() : {};
+
+  // ✅ USER PROCESS ONLY (ADMIN FULL BYPASS)
+  if (!isAdmin && userData.kycStatus !== "APPROVED") {
+    alert("KYC Pending ❌\nAdmin approve के बाद property add होगा ✅");
+    location.href = "kyc.html";
+    return;
+  }
+
+  if (!isAdmin && userData.planStatus !== "ACTIVE") {
+    alert("Plan required ❌\nPlan buy करके फिर add करो ✅");
+    location.href = "plans.html";
+    return;
+  }
+
+  // ✅ Photo compulsory
+  if (!finalWatermarkedBase64) {
     alert("Photo required ❌");
     return;
   }
 
-  if(!lat.value || !lng.value){
-    alert("GPS required ❌ (Capture GPS button दबाओ)");
+  // ✅ GPS compulsory
+  if (!lat.value || !lng.value) {
+    alert("GPS required ❌\nपहले GPS Capture button दबाओ ✅");
     return;
   }
 
@@ -172,19 +207,21 @@ form.onsubmit = async (e)=>{
     price: document.getElementById("price").value.trim(),
     description: document.getElementById("description").value.trim(),
 
-    image: finalWatermarkedBase64, // ✅ watermarked photo saved
+    image: finalWatermarkedBase64, // ✅ Proof photo for admin verify
     city: city.value.trim(),
     state: state.value.trim(),
     locationAddress: locationAddress.value.trim(),
-    gps: { lat:Number(lat.value), lng:Number(lng.value) },
 
+    gps: { lat: Number(lat.value), lng: Number(lng.value) },
+
+    // ✅ Admin process
     status: "PENDING",
     liveStatus: "EXPIRED",
     createdAt: serverTimestamp()
   };
 
-  await addDoc(collection(db,"properties"), data);
+  await addDoc(collection(db, "properties"), data);
 
-  alert("✅ Property Submitted!\nAdmin approve के बाद live होगी ✅");
-  location.href="dashboard.html";
+  alert("✅ Property Submitted!\nAdmin approve के बाद LIVE होगी ✅");
+  location.href = "dashboard.html";
 };
