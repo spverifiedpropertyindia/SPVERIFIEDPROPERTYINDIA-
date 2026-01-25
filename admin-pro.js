@@ -1,412 +1,431 @@
-// js/admin-pro.js
 import { db } from "./firebase.js";
-import { listenUser, logout } from "./auth.js";
+import { listenUser, logoutUser } from "./auth.js";
 
 import {
-  collection,
-  addDoc,
-  query,
-  where,
-  orderBy,
-  limit,
-  getDocs,
-  doc,
-  getDoc,
-  updateDoc,
+  collection, query, orderBy, onSnapshot,
+  doc, getDoc, updateDoc, setDoc,
   deleteDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const ADMIN_EMAIL = "raazsahu1000@gmail.com";
 
-// ===== DOM =====
-const logoutBtn = document.getElementById("logoutBtn");
+// ✅ Tabs
+const tabBtns = document.querySelectorAll(".tabBtn");
+const tabs = ["kycTab", "paymentTab", "propertyTab", "approvedTab", "addTab"];
 
-// Counters
+tabBtns.forEach(btn=>{
+  btn.onclick = ()=>{
+    tabBtns.forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+
+    const tabId = btn.dataset.tab;
+    tabs.forEach(t=>{
+      const el = document.getElementById(t);
+      if(el){
+        el.classList.add("hidden");
+      }
+    });
+
+    const activeTab = document.getElementById(tabId);
+    if(activeTab){
+      activeTab.classList.remove("hidden");
+    }
+  };
+});
+
+// ✅ Logout
+const logoutBtn = document.getElementById("logoutBtn");
+if(logoutBtn){
+  logoutBtn.onclick = async ()=>{
+    await logoutUser();
+    location.href = "login.html";
+  };
+}
+
+// ✅ Stat counts
 const kycCount = document.getElementById("kycCount");
 const propPendingCount = document.getElementById("propPendingCount");
 const propApprovedCount = document.getElementById("propApprovedCount");
 
-// Lists
+// ✅ Lists
 const kycList = document.getElementById("kycList");
 const paymentList = document.getElementById("paymentList");
 const pendingProps = document.getElementById("pendingProps");
 const approvedProps = document.getElementById("approvedProps");
 
-// Tabs
-const tabButtons = document.querySelectorAll(".tabBtn");
-const tabs = ["kycTab","paymentTab","propertyTab","approvedTab","addTab"];
-
-// Add Property form (Admin)
-const form = document.getElementById("form");
-
-// Search/Filter
+// ✅ Property Filters
 const adminSearch = document.getElementById("adminSearch");
 const adminTypeFilter = document.getElementById("adminTypeFilter");
 
-// ===== Helpers =====
-function safe(v){ return (v ?? "").toString(); }
+// ✅ PLAN VALIDITY
+const PLAN_DAYS = {
+  BASIC: 28,
+  STANDARD: 56,
+  PREMIUM: 84
+};
 
-function viewDocBtn(url, label){
-  if(!url) return "";
-  return `<a class="btn2" href="${url}" target="_blank">👁 View ${label}</a>`;
+function addDaysToDate(dateObj, days){
+  const d = new Date(dateObj);
+  d.setDate(d.getDate() + days);
+  return d;
 }
 
-function downloadDocBtn(url, label){
-  if(!url) return "";
-  return `<button class="btn2" onclick="downloadDoc('${url}','${label}')">⬇️ Download ${label}</button>`;
-}
-
-window.downloadDoc = (url, label)=>{
+function formatDate(d){
   try{
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${label}.jpg`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    return new Date(d).toLocaleDateString("en-IN");
   }catch(e){
-    alert("Download failed ❌");
+    return "";
   }
-};
-
-function mapBtn(p){
-  if(!p?.gps?.lat || !p?.gps?.lng) return "";
-  return `<a class="btn2" target="_blank" href="https://www.google.com/maps?q=${p.gps.lat},${p.gps.lng}">📍 Open Map</a>`;
 }
 
-function downloadPropPhotoBtn(p){
-  if(!p?.image) return "";
-  return `<button class="btn2" onclick="downloadDoc('${p.image}','PropertyPhoto')">⬇️ Download Photo</button>`;
-}
-
-// ===== Tabs Switch =====
-tabButtons.forEach(btn=>{
-  btn.addEventListener("click", ()=>{
-    tabButtons.forEach(b=>b.classList.remove("active"));
-    btn.classList.add("active");
-
-    const target = btn.dataset.tab;
-    tabs.forEach(t=> document.getElementById(t).classList.add("hidden"));
-    document.getElementById(target).classList.remove("hidden");
-  });
-});
-
-// ===== Logout =====
-if(logoutBtn){
-  logoutBtn.onclick = async ()=>{
-    await logout();
-    location.href="index.html";
-  };
-}
-
-// ===== Admin Guard =====
-listenUser((user)=>{
-  if(!user){
-    alert("Login required ✅");
-    location.href="login.html";
+// ✅ Protect Admin Page
+listenUser(async (u)=>{
+  if(!u){
+    alert("Login required!");
+    location.href = "login.html";
     return;
   }
-  if(user.email !== ADMIN_EMAIL){
-    alert("Access denied ❌ Only Admin allowed");
-    location.href="index.html";
+
+  if(u.email !== ADMIN_EMAIL){
+    alert("Access denied! Admin only.");
+    location.href = "dashboard.html";
     return;
   }
+
+  // ✅ Load All Admin Data
+  loadKYCPending();
+  loadPaymentsPending();
+  loadProperties();
+  initAddPropertyForm();
 });
 
-// ===== KYC =====
-function kycCard(k){
-  const aadhaarPhoto = k.aadhaarPhotoUrl || k.aadhaarPhoto || "";
-  const panPhoto = k.panPhotoUrl || k.panPhoto || "";
+// ----------------------------------------
+// ✅ KYC REQUESTS
+// ----------------------------------------
+function loadKYCPending(){
+  const q = query(collection(db, "kyc"), orderBy("createdAt", "desc"));
 
-  return `
-  <div class="card">
-    <div class="p">
-      <div class="badge">KYC ${safe(k.status)}</div>
-      <h3>${safe(k.fullName) || "User"}</h3>
+  onSnapshot(q, async (snap)=>{
+    let pending = 0;
+    kycList.innerHTML = "";
 
-      <p class="small"><b>Email:</b> ${safe(k.email)}</p>
-      <p class="small"><b>Aadhaar:</b> ${safe(k.aadhaar)}</p>
-      <p class="small"><b>PAN:</b> ${safe(k.pan)}</p>
+    snap.forEach((docSnap)=>{
+      const d = docSnap.data();
 
-      <div class="actionRow" style="margin-top:10px;">
-        ${viewDocBtn(aadhaarPhoto, "Aadhaar")}
-        ${downloadDocBtn(aadhaarPhoto, "Aadhaar")}
-      </div>
+      if(d.status === "PENDING"){
+        pending++;
 
-      <div class="actionRow" style="margin-top:10px;">
-        ${viewDocBtn(panPhoto, "PAN")}
-        ${downloadDocBtn(panPhoto, "PAN")}
-      </div>
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <h3>👤 ${d.fullName || "No Name"}</h3>
+          <p class="small"><b>Phone:</b> ${d.phone || ""}</p>
+          <p class="small"><b>Address:</b> ${d.address || ""}</p>
+          <p class="small"><b>ID Type:</b> ${d.idType || ""}</p>
+          <p class="small"><b>ID Number:</b> ${d.idNumber || ""}</p>
+          <p class="small"><b>Status:</b> ${d.status}</p>
 
-      <div class="actionRow" style="margin-top:12px;">
-        <button class="btn" onclick="approveKYC('${k.uid}')">✅ Approve</button>
-        <button class="btnRed" onclick="rejectKYC('${k.uid}')">❌ Reject</button>
-      </div>
-    </div>
-  </div>`;
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button class="btn" style="flex:1;" data-approve>Approve</button>
+            <button class="btn2" style="flex:1;" data-reject>Reject</button>
+          </div>
+        `;
+
+        card.querySelector("[data-approve]").onclick = async ()=>{
+          await approveKYC(docSnap.id);
+        };
+
+        card.querySelector("[data-reject]").onclick = async ()=>{
+          await rejectKYC(docSnap.id);
+        };
+
+        kycList.appendChild(card);
+      }
+    });
+
+    if(kycCount) kycCount.innerText = pending;
+
+    if(pending === 0){
+      kycList.innerHTML = `<p class="small">✅ No pending KYC requests.</p>`;
+    }
+  });
 }
 
-async function loadKYC(){
-  if(!kycList) return;
-  kycList.innerHTML = "Loading...";
+async function approveKYC(uid){
+  if(!confirm("Approve this KYC?")) return;
 
-  const q = query(collection(db,"kyc"), where("status","==","PENDING"));
-  const snap = await getDocs(q);
-
-  let html = "";
-  let count = 0;
-
-  snap.forEach((d)=>{
-    count++;
-    html += kycCard(d.data());
+  // ✅ Update KYC collection
+  await updateDoc(doc(db, "kyc", uid), {
+    status: "APPROVED",
+    approvedAt: serverTimestamp()
   });
 
-  if(kycCount) kycCount.innerText = count;
-  kycList.innerHTML = html || "<p>No KYC pending ✅</p>";
+  // ✅ Update users collection (important!)
+  await setDoc(doc(db, "users", uid), {
+    kycStatus: "APPROVED",
+    kycApprovedAt: serverTimestamp()
+  }, { merge: true });
+
+  alert("✅ KYC Approved!");
 }
 
-window.approveKYC = async (uid)=>{
-  await updateDoc(doc(db,"kyc",uid), { status:"APPROVED" });
-  await updateDoc(doc(db,"users",uid), { kycStatus:"APPROVED" });
-  loadKYC();
-};
+async function rejectKYC(uid){
+  if(!confirm("Reject this KYC?")) return;
 
-window.rejectKYC = async (uid)=>{
-  await updateDoc(doc(db,"kyc",uid), { status:"REJECTED" });
-  await updateDoc(doc(db,"users",uid), { kycStatus:"REJECTED" });
-  loadKYC();
-};
+  await updateDoc(doc(db, "kyc", uid), {
+    status: "REJECTED",
+    rejectedAt: serverTimestamp()
+  });
 
-// ===== Properties =====
-function propCard(id,p,statusLabel){
-  return `
-  <div class="card">
-    <img src="${p.image || 'https://picsum.photos/500/300'}" />
-    <div class="p">
-      <div class="badge">${statusLabel} • ${safe(p.liveStatus)}</div>
-      <h3>${safe(p.title)}</h3>
-      <div class="price">₹ ${safe(p.price)}</div>
-      <p class="small">${safe(p.city)} • ${safe(p.state)} • ${safe(p.type)}</p>
-      <p class="small"><b>Address:</b> ${safe(p.locationAddress)}</p>
+  await setDoc(doc(db, "users", uid), {
+    kycStatus: "REJECTED",
+    kycRejectedAt: serverTimestamp()
+  }, { merge: true });
 
-      <div class="actionRow">
-        ${
-          statusLabel==="PENDING"
-          ? `
-            <button class="btn" onclick="approveProp('${id}')">✅ Approve</button>
-            <button class="btnRed" onclick="rejectProp('${id}')">❌ Reject</button>
-          `
+  alert("❌ KYC Rejected!");
+}
+
+// ----------------------------------------
+// ✅ PAYMENTS REQUESTS
+// ----------------------------------------
+function loadPaymentsPending(){
+  const q = query(collection(db, "payments"), orderBy("createdAt", "desc"));
+
+  onSnapshot(q, async (snap)=>{
+    paymentList.innerHTML = "";
+
+    let found = 0;
+
+    snap.forEach((docSnap)=>{
+      const p = docSnap.data();
+
+      if(p.status === "PENDING"){
+        found++;
+
+        const card = document.createElement("div");
+        card.className = "card";
+
+        card.innerHTML = `
+          <h3>💳 ${p.plan || ""} (${p.role || ""})</h3>
+          <p class="small"><b>Email:</b> ${p.email || ""}</p>
+          <p class="small"><b>Amount:</b> ₹${p.amount || 0}</p>
+          <p class="small"><b>UTR/PaymentID:</b> ${p.utr || ""}</p>
+          <p class="small"><b>Status:</b> ${p.status}</p>
+
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button class="btn" style="flex:1;" data-approve>Approve</button>
+            <button class="btn2" style="flex:1;" data-reject>Reject</button>
+          </div>
+        `;
+
+        card.querySelector("[data-approve]").onclick = async ()=>{
+          await approvePayment(docSnap.id, p);
+        };
+
+        card.querySelector("[data-reject]").onclick = async ()=>{
+          await rejectPayment(docSnap.id);
+        };
+
+        paymentList.appendChild(card);
+      }
+    });
+
+    if(found === 0){
+      paymentList.innerHTML = `<p class="small">✅ No pending payments.</p>`;
+    }
+  });
+}
+
+async function approvePayment(paymentDocId, paymentData){
+  if(!confirm("Approve this payment and activate plan?")) return;
+
+  const uid = paymentData.uid;
+  const plan = paymentData.plan;
+  const role = paymentData.role;
+  const amount = paymentData.amount || 0;
+
+  const days = PLAN_DAYS[plan] || 0;
+
+  const expiry = addDaysToDate(new Date(), days);
+
+  // ✅ Mark payment as approved
+  await updateDoc(doc(db, "payments", paymentDocId), {
+    status: "APPROVED",
+    approvedAt: serverTimestamp()
+  });
+
+  // ✅ Update user plan in users collection
+  await setDoc(doc(db, "users", uid), {
+    planStatus: "ACTIVE",
+    planRole: role,
+    planName: plan,
+    planAmount: amount,
+    planStartDate: new Date().toISOString(),
+    planExpiryDate: expiry.toISOString(),
+    planExpiryLabel: formatDate(expiry),
+    lastPaymentId: paymentDocId,
+    updatedAt: serverTimestamp()
+  }, { merge: true });
+
+  alert(`✅ Payment Approved!\nPlan Activated: ${plan}\nExpiry: ${formatDate(expiry)}`);
+}
+
+async function rejectPayment(paymentDocId){
+  if(!confirm("Reject this payment?")) return;
+
+  await updateDoc(doc(db, "payments", paymentDocId), {
+    status: "REJECTED",
+    rejectedAt: serverTimestamp()
+  });
+
+  alert("❌ Payment Rejected!");
+}
+
+// ----------------------------------------
+// ✅ PROPERTIES (Pending + Approved)
+// ----------------------------------------
+function loadProperties(){
+  const q = query(collection(db, "properties"), orderBy("createdAt", "desc"));
+
+  let allProps = [];
+
+  onSnapshot(q, (snap)=>{
+    allProps = [];
+    snap.forEach((d)=>{
+      allProps.push({ id: d.id, ...d.data() });
+    });
+
+    renderProperties(allProps);
+  });
+
+  // ✅ Search & Filter
+  if(adminSearch){
+    adminSearch.oninput = ()=>renderProperties(allProps);
+  }
+  if(adminTypeFilter){
+    adminTypeFilter.onchange = ()=>renderProperties(allProps);
+  }
+}
+
+function renderProperties(allProps){
+  pendingProps.innerHTML = "";
+  approvedProps.innerHTML = "";
+
+  let pending = 0;
+  let approved = 0;
+
+  const searchText = (adminSearch?.value || "").toLowerCase().trim();
+  const typeFilter = adminTypeFilter?.value || "";
+
+  const filtered = allProps.filter(p=>{
+    const title = (p.title || "").toLowerCase();
+    const city = (p.city || "").toLowerCase();
+    const type = p.type || "";
+
+    const matchSearch = !searchText || title.includes(searchText) || city.includes(searchText);
+    const matchType = !typeFilter || type === typeFilter;
+
+    return matchSearch && matchType;
+  });
+
+  filtered.forEach((p)=>{
+    const isApproved = p.status === "APPROVED";
+
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <h3>${p.title || "Property"}</h3>
+      <p class="small"><b>City:</b> ${p.city || ""}</p>
+      <p class="small"><b>Type:</b> ${p.type || ""}</p>
+      <p class="small"><b>Price:</b> ${p.price || ""}</p>
+      <p class="small"><b>Status:</b> ${p.status || "PENDING"}</p>
+
+      ${p.image ? `<img src="${p.image}" style="width:100%;border-radius:12px;margin-top:8px;border:1px solid #eee;" />` : ""}
+
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        ${isApproved
+          ? `<button class="btn2" style="flex:1;" data-delete>Delete</button>`
           : `
-            <button class="btn2" onclick="deleteProp('${id}')">🗑 Delete</button>
+            <button class="btn" style="flex:1;" data-approve>Approve</button>
+            <button class="btn2" style="flex:1;" data-reject>Reject</button>
           `
         }
-        ${downloadPropPhotoBtn(p)}
-        ${mapBtn(p)}
       </div>
-    </div>
-  </div>`;
-}
+    `;
 
-async function loadPendingProps(){
-  if(!pendingProps) return;
-  pendingProps.innerHTML = "Loading...";
+    if(isApproved){
+      approved++;
+      card.querySelector("[data-delete]").onclick = async ()=>{
+        if(!confirm("Delete this property?")) return;
+        await deleteDoc(doc(db, "properties", p.id));
+        alert("🗑 Property deleted!");
+      };
+      approvedProps.appendChild(card);
+    }else{
+      pending++;
+      card.querySelector("[data-approve]").onclick = async ()=>{
+        await updateDoc(doc(db, "properties", p.id), {
+          status: "APPROVED",
+          approvedAt: serverTimestamp()
+        });
+        alert("✅ Property Approved!");
+      };
 
-  const q = query(
-    collection(db,"properties"),
-    where("status","==","PENDING"),
-    orderBy("createdAt","desc"),
-    limit(50)
-  );
+      card.querySelector("[data-reject]").onclick = async ()=>{
+        if(!confirm("Reject this property?")) return;
+        await updateDoc(doc(db, "properties", p.id), {
+          status: "REJECTED",
+          rejectedAt: serverTimestamp()
+        });
+        alert("❌ Property Rejected!");
+      };
 
-  const snap = await getDocs(q);
-
-  let html = "";
-  let count = 0;
-
-  snap.forEach((d)=>{
-    const p = d.data();
-
-    // ✅ filter
-    const queryText = (adminSearch?.value || "").toLowerCase().trim();
-    const typeFilter = (adminTypeFilter?.value || "").trim();
-
-    if(queryText){
-      const t = (p.title || "").toLowerCase();
-      const c = (p.city || "").toLowerCase();
-      if(!t.includes(queryText) && !c.includes(queryText)) return;
+      pendingProps.appendChild(card);
     }
-
-    if(typeFilter && p.type !== typeFilter) return;
-
-    count++;
-    html += propCard(d.id, p, "PENDING");
   });
 
-  if(propPendingCount) propPendingCount.innerText = count;
-  pendingProps.innerHTML = html || "<p>No pending properties ✅</p>";
-}
+  if(propPendingCount) propPendingCount.innerText = pending;
+  if(propApprovedCount) propApprovedCount.innerText = approved;
 
-async function loadApprovedProps(){
-  if(!approvedProps) return;
-  approvedProps.innerHTML = "Loading...";
-
-  const q = query(
-    collection(db,"properties"),
-    where("status","==","APPROVED"),
-    orderBy("createdAt","desc"),
-    limit(50)
-  );
-
-  const snap = await getDocs(q);
-
-  let html = "";
-  let count = 0;
-
-  snap.forEach((d)=>{
-    count++;
-    html += propCard(d.id, d.data(), "APPROVED");
-  });
-
-  if(propApprovedCount) propApprovedCount.innerText = count;
-  approvedProps.innerHTML = html || "<p>No approved properties.</p>";
-}
-
-window.approveProp = async (id)=>{
-  await updateDoc(doc(db,"properties",id), {
-    status:"APPROVED",
-    liveStatus:"LIVE"
-  });
-  loadPendingProps();
-  loadApprovedProps();
-};
-
-window.rejectProp = async (id)=>{
-  await updateDoc(doc(db,"properties",id), {
-    status:"REJECTED",
-    liveStatus:"EXPIRED"
-  });
-  loadPendingProps();
-};
-
-window.deleteProp = async (id)=>{
-  if(confirm("Delete this property?")){
-    await deleteDoc(doc(db,"properties",id));
-    loadApprovedProps();
+  if(pending === 0){
+    pendingProps.innerHTML = `<p class="small">✅ No pending properties.</p>`;
   }
-};
-
-// ===== Payments =====
-function planDays(plan){
-  if(plan==="BASIC") return 28;
-  if(plan==="STANDARD") return 56;
-  if(plan==="PREMIUM") return 84;
-  return 28;
+  if(approved === 0){
+    approvedProps.innerHTML = `<p class="small">✅ No approved properties.</p>`;
+  }
 }
 
-function payCard(id,p){
-  return `
-  <div class="card">
-    <div class="p">
-      <div class="badge">PAYMENT ${safe(p.status)}</div>
-      <h3>${safe(p.plan)} Plan</h3>
-      <p class="small"><b>User:</b> ${safe(p.email)}</p>
-      <p class="small"><b>Role:</b> ${safe(p.role)}</p>
-      <p class="small"><b>Amount:</b> ₹${safe(p.amount)}</p>
-      <p class="small"><b>UTR:</b> ${safe(p.utr)}</p>
+// ----------------------------------------
+// ✅ ADD PROPERTY FORM
+// ----------------------------------------
+function initAddPropertyForm(){
+  const form = document.getElementById("form");
+  if(!form) return;
 
-      <div class="actionRow">
-        <button class="btn" onclick="approvePayment('${id}','${p.uid}','${p.role}','${p.plan}')">✅ Approve</button>
-        <button class="btnRed" onclick="rejectPayment('${id}')">❌ Reject</button>
-      </div>
-    </div>
-  </div>`;
-}
-
-async function loadPayments(){
-  if(!paymentList) return;
-  paymentList.innerHTML = "Loading...";
-
-  const q = query(
-    collection(db,"payments"),
-    where("status","==","PENDING"),
-    orderBy("createdAt","desc"),
-    limit(50)
-  );
-
-  const snap = await getDocs(q);
-
-  let html = "";
-  snap.forEach((d)=>{
-    html += payCard(d.id, d.data());
-  });
-
-  paymentList.innerHTML = html || "<p>No pending payments ✅</p>";
-}
-
-window.rejectPayment = async (paymentId)=>{
-  await updateDoc(doc(db,"payments",paymentId), { status:"REJECTED" });
-  loadPayments();
-};
-
-window.approvePayment = async (paymentId, uid, role, plan)=>{
-  await updateDoc(doc(db,"payments",paymentId), { status:"APPROVED" });
-
-  const days = planDays(plan);
-  const now = new Date();
-  const end = new Date(now.getTime() + (days * 24 * 60 * 60 * 1000));
-
-  await updateDoc(doc(db,"users",uid), {
-    role: role,
-    activePlan: plan,
-    planStatus: "ACTIVE",
-    planStartAt: serverTimestamp(),
-    planEndAt: end,
-    monthlyListingsUsed: 0,
-    monthlyResetAt: serverTimestamp()
-  });
-
-  alert("✅ Plan Activated!");
-  loadPayments();
-};
-
-// ===== Admin Add Property (Optional) =====
-if(form){
   form.onsubmit = async (e)=>{
     e.preventDefault();
 
-    const data = {
-      title: title.value,
-      city: city.value,
-      state: state.value || "",
-      type: type.value,
-      price: price.value,
-      image: image.value || "",
-      description: description.value,
-      ownerName: ownerName.value || "",
-      ownerPhone: ownerPhone.value || "",
-      status: "PENDING",
-      liveStatus: "EXPIRED",
+    const newProp = {
+      title: document.getElementById("title").value,
+      city: document.getElementById("city").value,
+      state: document.getElementById("state").value,
+      type: document.getElementById("type").value,
+      price: document.getElementById("price").value,
+      image: document.getElementById("image").value,
+      description: document.getElementById("description").value,
+      ownerName: document.getElementById("ownerName").value,
+      ownerPhone: document.getElementById("ownerPhone").value,
+
+      status: "APPROVED", // ✅ admin add = auto approved
       createdAt: serverTimestamp()
     };
 
-    await addDoc(collection(db,"properties"), data);
-    alert("✅ Property Added! (PENDING)");
+    // ✅ Save new property
+    const { addDoc, collection } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
+    await addDoc(collection(db, "properties"), newProp);
+
+    alert("✅ Property Added Successfully!");
     form.reset();
-    loadPendingProps();
   };
 }
-
-// ✅ search live
-if(adminSearch){
-  adminSearch.addEventListener("input", loadPendingProps);
-}
-if(adminTypeFilter){
-  adminTypeFilter.addEventListener("change", loadPendingProps);
-}
-
-// ===== INIT =====
-loadKYC();
-loadPayments();
-loadPendingProps();
-loadApprovedProps();
