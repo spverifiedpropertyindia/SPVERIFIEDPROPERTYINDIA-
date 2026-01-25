@@ -41,6 +41,21 @@
       <label>ID Number</label>
       <input id="idNumber" required>
 
+      <!-- ✅ Upload fields (NO storage, only for user selection proof) -->
+      <label>PAN Card Photo (Optional)</label>
+      <input type="file" id="panPhoto" accept="image/*">
+
+      <label>Aadhaar Front Photo (Optional)</label>
+      <input type="file" id="aadhaarFront" accept="image/*">
+
+      <label>Aadhaar Back Photo (Optional)</label>
+      <input type="file" id="aadhaarBack" accept="image/*">
+
+      <p class="small" style="margin-top:8px;color:#777;">
+        ⚠️ Note: Photo upload option hai, lekin server me save nahi hoga (Free version).
+        Aap WhatsApp pe documents bhej sakte ho.
+      </p>
+
       <button class="btn" style="margin-top:12px;width:100%;">Submit KYC</button>
     </form>
 
@@ -48,12 +63,12 @@
   </div>
 
   <div class="footer">
-  ✅ WhatsApp Support:
-  <a href="https://wa.me/918305070599" target="_blank"><b>8305070599</b></a>
-  &nbsp; | &nbsp;
-  ✅ Support Email:
-  <a href="mailto:spverifiedproperty@gmail.com"><b>spverifiedproperty@gmail.com</b></a>
-</div>
+    ✅ WhatsApp Support:
+    <a href="https://wa.me/918305070599" target="_blank"><b>8305070599</b></a>
+    &nbsp; | &nbsp;
+    ✅ Support Email:
+    <a href="mailto:spverifiedproperty@gmail.com"><b>spverifiedproperty@gmail.com</b></a>
+  </div>
 </div>
 
 <script type="module">
@@ -78,6 +93,11 @@
     e.preventDefault();
     if(!userData) return;
 
+    // ✅ only checking selected files (not uploading anywhere)
+    const panSelected = document.getElementById("panPhoto").files.length > 0;
+    const aadhaarFrontSelected = document.getElementById("aadhaarFront").files.length > 0;
+    const aadhaarBackSelected = document.getElementById("aadhaarBack").files.length > 0;
+
     await setDoc(doc(db, "kyc", userData.uid), {
       uid: userData.uid,
       fullName: fullName.value,
@@ -85,6 +105,12 @@
       address: address.value,
       idType: idType.value,
       idNumber: idNumber.value,
+
+      // ✅ just boolean info (no image storage)
+      panPhotoSelected: panSelected,
+      aadhaarFrontSelected: aadhaarFrontSelected,
+      aadhaarBackSelected: aadhaarBackSelected,
+
       status: "PENDING",
       createdAt: serverTimestamp()
     });
@@ -95,4 +121,4 @@
 </script>
 
 </body>
-</html>
+  </html>
