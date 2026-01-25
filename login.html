@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body>
+
   <div class="nav">
     <div class="logo">🏠 SP VERIFIED PROPERTY INDIA</div>
     <div class="menu">
@@ -20,28 +21,34 @@
       <h2>Login</h2>
       <p class="small">Continue with Google. KYC + Plan required to add properties.</p>
 
-      <button class="btn" id="googleBtn" style="margin-top:14px;width:100%;">Continue with Google</button>
+      <button class="btn" id="googleBtn" style="margin-top:14px;width:100%;">
+        Continue with Google
+      </button>
     </div>
   </div>
 
   <div class="footer">
-  ✅ WhatsApp Support:
-  <a href="https://wa.me/918305070599" target="_blank"><b>8305070599</b></a>
-  &nbsp; | &nbsp;
-  ✅ Support Email:
-  <a href="mailto:spverifiedproperty@gmail.com"><b>spverifiedproperty@gmail.com</b></a>
-</div>
+    ✅ WhatsApp Support:
+    <a href="https://wa.me/918305070599" target="_blank"><b>8305070599</b></a>
+    &nbsp; | &nbsp;
+    ✅ Support Email:
+    <a href="mailto:spverifiedproperty@gmail.com"><b>spverifiedproperty@gmail.com</b></a>
+  </div>
 
   <script type="module">
-    import { googleLogin } from "./js/auth.js";
-    document.getElementById("googleBtn").onclick = async () => {
-      try{
-        await googleLogin();
-        location.href="dashboard.html";
-      }catch(e){
-        alert(e.message);
-      }
+    import { googleLogin, handleRedirectLogin } from "./js/auth.js";
+
+    // ✅ Redirect se wapas aaya to dashboard open
+    const user = await handleRedirectLogin();
+    if(user){
+      location.href = "dashboard.html";
     }
+
+    // ✅ Button click se redirect login start
+    document.getElementById("googleBtn").onclick = async () => {
+      await googleLogin();
+    };
   </script>
+
 </body>
 </html>
