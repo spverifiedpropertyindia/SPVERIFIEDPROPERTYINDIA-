@@ -3,7 +3,8 @@ import { listenUser, logoutUser } from "./auth.js";
 
 import {
   doc, getDoc,
-  collection, query, where, orderBy, onSnapshot
+  collection, query, where, orderBy, onSnapshot,
+  getDocs, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const logoutBtn = document.getElementById("logoutBtn");
@@ -94,7 +95,7 @@ listenUser(async (u)=>{
   if(planExpiryEl) planExpiryEl.innerText = expLabel;
 
   // ✅ Listings remaining (simple rule)
-  // BASIC = 3, STANDARD = 10, PREMIUM = 25 (आप चाहो तो change कर देना)
+  // BASIC = 3, STANDARD = 10, PREMIUM = 25
   const LIMITS = { BASIC: 3, STANDARD: 10, PREMIUM: 25 };
   const planName = userData.planName || "BASIC";
   const maxListings = LIMITS[planName] || 0;
@@ -102,6 +103,11 @@ listenUser(async (u)=>{
   // ✅ Check current plan active or expired
   const active = isPlanActive(userData);
   const remainingDays = planDaysRemaining(userData);
+
+  // ✅ NEW FEATURE: Plan expired -> Auto Expire Properties
+  if(!active){
+    await expireUserProperties(u.uid);
+  }
 
   // ✅ UI messages + Add Property allow/deny
   if(!active){
@@ -192,4 +198,32 @@ function loadMyProperties(uid, maxListings, planActive){
       myProps.innerHTML = `<p class="small">No properties yet. Add your first property ✅</p>`;
     }
   });
+}
+
+// ✅ NEW FEATURE FUNCTION: Auto Expire Approved Properties when plan expires
+async function expireUserProperties(uid){
+  try{
+    const q = query(
+      collection(db, "properties"),
+      where("uid", "==", uid),
+      where("status", "==", "APPROVED")
+    );
+
+    const snap = await getDocs(q);
+    if(snap.empty) return;
+
+    const batch = writeBatch(db);
+
+    snap.forEach((d)=>{
+      batch.update(doc(db, "properties", d.id), {
+        status: "EXPIRED",
+        expiredAt: new Date().toISOString()
+      });
+    });
+
+    await batch.commit();
+    console.log("✅ Auto Expired properties (plan expired)");
+  }catch(err){
+    console.log("❌ Expire error:", err);
+  }
 }
