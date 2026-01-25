@@ -20,11 +20,34 @@
   <div class="container">
     <div class="box">
       <h2>All Approved + LIVE Properties ✅</h2>
+
       <div class="row" style="margin-top:12px;">
+
         <div class="col">
-          <label>City</label>
-          <input id="city" placeholder="Raipur"/>
+          <label>District (Chhattisgarh)</label>
+          <select id="district">
+            <option value="">All District</option>
+          </select>
         </div>
+
+        <div class="col">
+          <label>Block</label>
+          <select id="block">
+            <option value="">All Block</option>
+          </select>
+        </div>
+
+        <div class="col">
+          <label>Village</label>
+          <select id="village">
+            <option value="">All Village</option>
+          </select>
+        </div>
+
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+
         <div class="col">
           <label>Type</label>
           <select id="type">
@@ -36,23 +59,27 @@
             <option value="Rent">Rent</option>
           </select>
         </div>
+
         <div class="col">
           <label>Action</label>
           <button class="btn" id="searchBtn" style="width:100%;">Search</button>
         </div>
+
       </div>
+
+      <p class="small" id="msg" style="margin-top:10px;"></p>
     </div>
 
     <div class="grid" id="list"></div>
   </div>
 
   <div class="footer">
-  ✅ WhatsApp Support:
-  <a href="https://wa.me/918305070599" target="_blank"><b>8305070599</b></a>
-  &nbsp; | &nbsp;
-  ✅ Support Email:
-  <a href="mailto:spverifiedproperty@gmail.com"><b>spverifiedproperty@gmail.com</b></a>
-</div>
+    ✅ WhatsApp Support:
+    <a href="https://wa.me/918305070599" target="_blank"><b>8305070599</b></a>
+    &nbsp; | &nbsp;
+    ✅ Support Email:
+    <a href="mailto:spverifiedproperty@gmail.com"><b>spverifiedproperty@gmail.com</b></a>
+  </div>
 
   <script type="module" src="js/app.js"></script>
 </body>
