@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Upload CG Full Locations</title>
+</head>
+<body style="font-family:Arial;padding:20px;">
+  <h2>✅ Upload Chhattisgarh (District + Block + Village)</h2>
+
+  <p><b>Step 1:</b> Upload District + Blocks (1 click)</p>
+  <button id="uploadDistrictBlocksBtn" style="padding:12px 16px;font-size:16px;">
+    ✅ Upload District + Blocks
+  </button>
+
+  <hr style="margin:18px 0;"/>
+
+  <p><b>Step 2:</b> Upload Villages using JSON file (Census Data)</p>
+  <input type="file" id="villageJsonFile" accept=".json" />
+  <button id="uploadVillagesBtn" style="padding:12px 16px;font-size:16px;">
+    ✅ Upload Villages JSON
+  </button>
+
+  <p id="status" style="margin-top:15px;color:green;"></p>
+
+  <script type="module">
+    import { db } from "./js/firebase.js";
+    import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+    const status = document.getElementById("status");
+
+    // ✅ 33 Districts (Chhattisgarh)
+    const CG_DISTRICTS = [
+      "Balod","Baloda Bazar","Balrampur","Bastar","Bemetara","Bijapur",
+      "Bilaspur","Dantewada","Dhamtari","Durg","Gariaband","Gaurela Pendra Marwahi",
+      "Janjgir Champa","Jashpur","Kabirdham","Kanker","Kondagaon","Korba",
+      "Koriya","Mahasamund","Manendragarh Chirmiri Bharatpur","Mohla Manpur Ambagarh Chowki",
+      "Mungeli","Narayanpur","Raigarh","Raipur","Rajnandgaon","Sakti",
+      "Sarangarh Bilaigarh","Sukma","Surajpur","Surguja","Khairagarh Chhuikhadan Gandai"
+    ];
+
+    // ✅ District -> Blocks (FULL LIST आपको मैं अगले message में दे दूँगा)
+    // फिलहाल example format:
+    const BLOCKS_BY_DISTRICT = {
+      "Raipur": ["Abhanpur","Arang","Tilda","Dharsiwa"],
+      "Durg": ["Durg","Patan","Dhamdha"],
+      "Bilaspur": ["Bilaspur","Masturi","Takhatpur"]
+    };
+
+    // ✅ Step 1: Upload districts + blocks
+    document.getElementById("uploadDistrictBlocksBtn").onclick = async () => {
+      status.innerHTML = "⏳ Uploading districts + blocks...";
+
+      await setDoc(doc(db, "locations", "Chhattisgarh"), {
+        state: "Chhattisgarh",
+        districts: CG_DISTRICTS
+      });
+
+      for (const district of Object.keys(BLOCKS_BY_DISTRICT)) {
+        await setDoc(doc(db, "blocks", district), {
+          district,
+          blocks: BLOCKS_BY_DISTRICT[district]
+        });
+      }
+
+      status.innerHTML = "✅ District + Blocks uploaded successfully!";
+      alert("✅ Done! District + Blocks uploaded.");
+    };
+
+    // ✅ Step 2: Upload villages JSON
+    // ✅ JSON Format Required:
+    // {
+    //   "Raipur": {
+    //     "Abhanpur": ["Village1","Village2"],
+    //     "Arang": ["Village1","Village2"]
+    //   },
+    //   "Durg": {
+    //     "Durg": ["VillageA","VillageB"]
+    //   }
+    // }
+
+    document.getElementById("uploadVillagesBtn").onclick = async () => {
+      const fileInput = document.getElementById("villageJsonFile");
+      if (!fileInput.files[0]) {
+        alert("❌ Please select villages JSON file!");
+        return;
+      }
+
+      status.innerHTML = "⏳ Reading villages JSON file...";
+
+      const text = await fileInput.files[0].text();
+      const data = JSON.parse(text);
+
+      status.innerHTML = "⏳ Uploading villages to Firestore...";
+
+      let districtCount = 0;
+      let blockCount = 0;
+
+      for (const districtName of Object.keys(data)) {
+        districtCount++;
+
+        const blocksObj = data[districtName];
+
+        for (const blockName of Object.keys(blocksObj)) {
+          blockCount++;
+
+          const villages = blocksObj[blockName] || [];
+
+          await setDoc(doc(db, "villages", blockName), {
+            district: districtName,
+            block: blockName,
+            villages: villages
+          });
+        }
+      }
+
+      status.innerHTML = `✅ Villages uploaded! Districts: ${districtCount}, Blocks: ${blockCount}`;
+      alert("✅ Villages upload completed!");
+    };
+  </script>
+
+</body>
+</html>
