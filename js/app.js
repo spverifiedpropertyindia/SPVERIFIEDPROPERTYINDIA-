@@ -46,7 +46,7 @@ function cardHTML(docId, p){
     <div class="card">
       <img src="${p.image || 'https://picsum.photos/500/300'}" alt="property"/>
       <div class="p">
-        <div class="badge">${p.type || ""}</div>
+        <div class="badge">✅ VERIFIED • ${p.type || ""}</div>
         <h3>${p.title || ""}</h3>
         <div class="price">₹ ${p.price || ""}</div>
         <div class="small">${p.city || ""} • ${p.state || ""}</div>
