@@ -1,24 +1,33 @@
 // js/auth.js
 import { auth } from "./firebase.js";
+
 import {
   GoogleAuthProvider,
-  signInWithPopup,
-  onAuthStateChanged,
-  signOut
+  signInWithRedirect,
+  getRedirectResult,
+  signOut,
+  onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
-const provider = new GoogleAuthProvider();
-
-export async function googleLogin() {
-  await signInWithPopup(auth, provider);
+export async function loginWithGoogle() {
+  const provider = new GoogleAuthProvider();
+  await signInWithRedirect(auth, provider);
 }
 
-export function listenUser(callback){
-  onAuthStateChanged(auth, (user)=>{
-    callback(user);
-  });
+export async function handleRedirectLogin() {
+  try {
+    const result = await getRedirectResult(auth);
+    return result?.user || null;
+  } catch (e) {
+    console.error("Redirect Login Error:", e);
+    return null;
+  }
 }
 
-export async function logout(){
+export async function logout() {
   await signOut(auth);
 }
+
+export function listenUser(cb) {
+  return onAuthStateChanged(auth, (user) => cb(user));
+                            }
