@@ -103,7 +103,6 @@ async function loadDistrictsForAdmin() {
   if (!snap.exists()) return;
 
   const districts = snap.data().districts || [];
-
   districts.forEach((d) => {
     districtSelect.innerHTML += `<option value="${d}">${d}</option>`;
   });
@@ -135,7 +134,6 @@ async function loadVillagesForAdmin(districtName, blockName) {
 
   if (!districtName || !blockName) return;
 
-  // ✅ Chunk mode villages read
   const q = query(
     collection(db, "villages"),
     where("district", "==", districtName.trim()),
@@ -249,7 +247,7 @@ window.rejectKyc = async function (kycDocId, uid) {
 };
 
 // ======================================
-// ✅ PAYMENTS (Approve/Reject)
+// ✅ PAYMENTS (Approve/Reject) + ✅ PLAN EXPIRY AUTO
 // ======================================
 function loadPayments() {
   const q = query(collection(db, "payments"), orderBy("createdAt", "desc"));
@@ -286,6 +284,13 @@ function loadPayments() {
 window.approvePayment = async function (paymentId, uid, role, plan) {
   if (!confirm("Approve this payment?")) return;
 
+  const PLAN_DAYS = { BASIC: 28, STANDARD: 56, PREMIUM: 84 };
+  const days = PLAN_DAYS[plan] || 0;
+
+  const now = new Date();
+  const expiry = new Date();
+  expiry.setDate(now.getDate() + days);
+
   await updateDoc(doc(db, "payments", paymentId), {
     status: "APPROVED",
     approvedAt: serverTimestamp()
@@ -295,10 +300,13 @@ window.approvePayment = async function (paymentId, uid, role, plan) {
     planRole: role,
     planType: plan,
     planStatus: "ACTIVE",
+    planDays: days,
+    planStartedAt: serverTimestamp(),
+    planExpiryAt: expiry.toISOString(),
     planUpdatedAt: serverTimestamp()
   });
 
-  alert("✅ Payment Approved & Plan Activated!");
+  alert("✅ Payment Approved & Plan Activated with Expiry!");
 };
 
 window.rejectPayment = async function (paymentId) {
@@ -420,7 +428,7 @@ window.rejectProperty = async function (propId) {
 };
 
 // ======================================
-// ✅ APPROVED PROPERTIES + WhatsApp button
+// ✅ APPROVED PROPERTIES
 // ======================================
 function loadApprovedProperties() {
   const q = query(
@@ -445,6 +453,7 @@ function loadApprovedProperties() {
       approvedProps.innerHTML += `
         <div class="card">
           <h3>✅ ${p.title || ""}</h3>
+
           <p class="small"><b>District:</b> ${p.district || ""}</p>
           <p class="small"><b>Block:</b> ${p.block || ""}</p>
           <p class="small"><b>Village:</b> ${p.village || ""}</p>
@@ -476,7 +485,7 @@ window.deleteApprovedProperty = async function (propId) {
 };
 
 // ======================================
-// ✅ ADD PROPERTY SAVE (Admin)
+// ✅ ADD PROPERTY SAVE (Admin) + compulsory location
 // ======================================
 if (form) {
   form.onsubmit = async (e) => {
@@ -492,7 +501,6 @@ if (form) {
     const ownerPhone = document.getElementById("ownerPhone").value.trim();
     const whatsapp = document.getElementById("whatsapp").value.trim();
 
-    // ✅ NEW: Location fields
     const district = districtSelect ? districtSelect.value.trim() : "";
     const block = blockSelect ? blockSelect.value.trim() : "";
     const village = villageInput ? villageInput.value.trim() : "";
@@ -528,9 +536,8 @@ if (form) {
     alert("✅ Property Saved! Status: PENDING");
     form.reset();
 
-    // ✅ Reset location inputs
     if (blockSelect) blockSelect.innerHTML = `<option value="">Select Block</option>`;
     if (villageInput) villageInput.value = "";
     if (villageList) villageList.innerHTML = "";
   };
-    }
+  }
