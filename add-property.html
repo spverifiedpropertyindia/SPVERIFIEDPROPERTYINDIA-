@@ -11,105 +11,94 @@
 <div class="nav">
   <div class="logo">➕ Add Property</div>
   <div class="menu">
+    <a href="index.html">Home</a>
     <a href="dashboard.html">Dashboard</a>
-    <a href="properties.html">Public Properties</a>
+    <a href="properties.html">Properties</a>
   </div>
 </div>
 
 <div class="container">
+
   <div class="box">
     <h2>Submit Property ✅</h2>
-    <p class="small">Property submit karne ke baad PENDING me rahegi. Admin approve karega.</p>
+    <p class="small" id="statusMsg">⏳ Checking your KYC & Plan...</p>
 
-    <p class="small" id="warning" style="margin-top:10px;"></p>
-
-    <form id="propForm">
+    <form id="propForm" style="margin-top:10px;">
 
       <div class="row">
         <div class="col">
-          <label>Title *</label>
-          <input id="title" required placeholder="2BHK Flat in Raipur"/>
+          <label>Title</label>
+          <input id="title" required />
         </div>
         <div class="col">
-          <label>Type *</label>
-          <select id="type" required>
-            <option value="House">House</option>
-            <option value="Flat">Flat</option>
-            <option value="Plot">Plot</option>
-            <option value="Commercial">Commercial</option>
-            <option value="Rent">Rent</option>
+          <label>Price</label>
+          <input id="price" required />
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <label>District</label>
+          <select id="district" required>
+            <option value="">Select District</option>
+          </select>
+        </div>
+        <div class="col">
+          <label>Block</label>
+          <select id="block" required>
+            <option value="">Select Block</option>
           </select>
         </div>
       </div>
 
       <div class="row">
         <div class="col">
-          <label>Price *</label>
-          <input id="price" required placeholder="1500000"/>
+          <label>Village (Search)</label>
+          <input id="village" list="villageList" placeholder="Type village..." required />
+          <datalist id="villageList"></datalist>
         </div>
         <div class="col">
-          <label>Date & Time (Auto)</label>
-          <input id="dateTime" readonly />
+          <label>Type</label>
+          <select id="type" required>
+            <option value="Plot">Plot</option>
+            <option value="House">House</option>
+            <option value="Flat">Flat</option>
+            <option value="Commercial">Commercial</option>
+            <option value="Rent">Rent</option>
+          </select>
         </div>
       </div>
 
-      <!-- ✅ 3 Photos Compulsory (Camera Preferred) -->
-      <label>Capture Minimum 3 Photos (Compulsory) * (Different Angle)</label>
-
-      <label style="margin-top:8px;">📸 Photo 1 (Front Angle) *</label>
-      <input id="photo1" type="file" accept="image/*" capture="environment" required />
-
-      <label style="margin-top:8px;">📸 Photo 2 (Left Angle) *</label>
-      <input id="photo2" type="file" accept="image/*" capture="environment" required />
-
-      <label style="margin-top:8px;">📸 Photo 3 (Right Angle) *</label>
-      <input id="photo3" type="file" accept="image/*" capture="environment" required />
-
-      <div id="photoPreview" style="margin-top:10px;"></div>
-
-      <!-- ✅ WhatsApp Send Box + Button -->
-      <div style="margin-top:10px;padding:10px;border:1px dashed #ccc;border-radius:12px;background:#fff7e6;">
-        <p class="small" style="margin:0;">
-          ✅ <b>Minimum 3 Photos compulsory</b> ✅<br/>
-          ⚠️ Storage OFF hai, isliye photos yahan save/upload nahi hongi.<br/>
-          ✅ 3 photos WhatsApp par bhejna compulsory hai.
-        </p>
-      </div>
-
-      <button type="button" class="btn2" style="width:100%;margin-top:10px;"
-        onclick="window.open('https://wa.me/918305070599?text=Hello%20SP%20Verified%20Property%20India%2C%20Main%20property%20ke%203%20photos%20(Front%2FLeft%2FRight)%20bhej%20raha%20hu.%20Please%20verify%20my%20property.','_blank')">
-        📤 Send 3 Property Photos on WhatsApp
-      </button>
-
-      <!-- ✅ GPS -->
-      <label style="margin-top:12px;">GPS Location (Compulsory) *</label>
-      <button type="button" class="btn" id="gpsBtn">📍 Capture GPS</button>
-      <p class="small" id="gpsText" style="margin-top:8px;">GPS not captured ❌</p>
-
-      <label>City (Auto from GPS) *</label>
-      <input id="city" required readonly placeholder="Auto City will appear here"/>
-
-      <label>State (Auto from GPS) *</label>
-      <input id="state" required readonly placeholder="Auto State will appear here"/>
-
-      <label>Location Address (Auto from GPS) *</label>
-      <textarea id="locationAddress" required readonly placeholder="Auto Address will appear here"></textarea>
-
-      <label>Description *</label>
-      <textarea id="description" required placeholder="Full property details..."></textarea>
+      <label>Description</label>
+      <textarea id="description" required></textarea>
 
       <div class="row">
         <div class="col">
-          <label>Owner Name *</label>
-          <input id="ownerName" required placeholder="Your name"/>
+          <label>Owner Name</label>
+          <input id="ownerName" />
         </div>
         <div class="col">
-          <label>Owner Phone *</label>
-          <input id="ownerPhone" required placeholder="8305070599"/>
+          <label>Owner Phone</label>
+          <input id="ownerPhone" />
         </div>
       </div>
 
-      <button class="btn" style="margin-top:12px;width:100%;">✅ Submit Property</button>
+      <div class="row">
+        <div class="col">
+          <label>WhatsApp Number</label>
+          <input id="whatsapp" placeholder="8305070599" />
+        </div>
+        <div class="col">
+          <label>City</label>
+          <input id="city" placeholder="Optional" />
+        </div>
+      </div>
+
+      <button class="btn" id="submitBtn" style="margin-top:12px;width:100%;" disabled>
+        Submit Property
+      </button>
+
+      <p class="small" id="msg" style="margin-top:10px;"></p>
     </form>
   </div>
 
@@ -120,8 +109,9 @@
     ✅ Support Email:
     <a href="mailto:spverifiedproperty@gmail.com"><b>spverifiedproperty@gmail.com</b></a>
   </div>
+
 </div>
 
-<script type="module" src="js/add-property.js"></script>
+<script type="module" src="js/add-property.js?v=1"></script>
 </body>
-        </html>
+  </html>
