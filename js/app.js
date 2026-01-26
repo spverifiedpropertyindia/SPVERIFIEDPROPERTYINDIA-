@@ -12,7 +12,11 @@ import {
 
 const districtSelect = document.getElementById("district");
 const blockSelect = document.getElementById("block");
-const villageSelect = document.getElementById("village");
+
+// ✅ अब village input है
+const villageInput = document.getElementById("village");
+const villageList = document.getElementById("villageList");
+
 const typeSelect = document.getElementById("type");
 
 const searchBtn = document.getElementById("searchBtn");
@@ -23,7 +27,10 @@ const msg = document.getElementById("msg");
 async function loadDistricts() {
   districtSelect.innerHTML = `<option value="">All District</option>`;
   blockSelect.innerHTML = `<option value="">All Block</option>`;
-  villageSelect.innerHTML = `<option value="">All Village</option>`;
+
+  // ✅ clear village input + datalist
+  villageInput.value = "";
+  villageList.innerHTML = "";
 
   const snap = await getDoc(doc(db, "locations", "Chhattisgarh"));
   if (!snap.exists()) {
@@ -42,7 +49,10 @@ async function loadDistricts() {
 // ✅ Load blocks district-wise
 async function loadBlocks(districtName) {
   blockSelect.innerHTML = `<option value="">All Block</option>`;
-  villageSelect.innerHTML = `<option value="">All Village</option>`;
+
+  // ✅ clear village input + datalist
+  villageInput.value = "";
+  villageList.innerHTML = "";
 
   if (!districtName) return;
 
@@ -59,13 +69,17 @@ async function loadBlocks(districtName) {
   });
 }
 
-// ✅ ✅ Load villages (Chunk Mode)
+// ✅ ✅ Load villages (Chunk Mode) -> datalist searchable
 async function loadVillages(blockName) {
-  villageSelect.innerHTML = `<option value="">All Village</option>`;
+  villageInput.value = "";
+  villageList.innerHTML = "";
+
   if (!blockName) return;
 
   const district = districtSelect.value.trim();
   blockName = blockName.trim();
+
+  msg.innerHTML = "⏳ Loading villages...";
 
   // ✅ Read all chunk docs for this district+block
   const q = query(
@@ -86,9 +100,14 @@ async function loadVillages(blockName) {
   // ✅ Unique + sort
   allVillages = Array.from(new Set(allVillages)).sort();
 
+  // ✅ Fill datalist for search
   allVillages.forEach((v) => {
-    villageSelect.innerHTML += `<option value="${v}">${v}</option>`;
+    const opt = document.createElement("option");
+    opt.value = v;
+    villageList.appendChild(opt);
   });
+
+  msg.innerHTML = `✅ Villages loaded: ${allVillages.length}`;
 }
 
 // ✅ Auto change handlers
@@ -123,12 +142,18 @@ function renderProperties(arr) {
 
         <p class="small" style="margin-top:8px;">${p.description || ""}</p>
 
-        ${whatsapp ? `
-          <a class="btn2" target="_blank"
-             href="https://wa.me/91${whatsapp}">
-             ✅ WhatsApp
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+          <a class="btn2" href="property-details.html?id=${p.id}">
+            👁 View Details
           </a>
-        ` : ""}
+
+          ${whatsapp ? `
+            <a class="btn2" target="_blank"
+               href="https://wa.me/91${whatsapp}">
+               ✅ WhatsApp
+            </a>
+          ` : ""}
+        </div>
       </div>
     `;
   });
@@ -140,7 +165,10 @@ async function loadApprovedProperties() {
 
   const district = districtSelect.value;
   const block = blockSelect.value;
-  const village = villageSelect.value;
+
+  // ✅ searchable village input
+  const village = (villageInput.value || "").trim();
+
   const type = typeSelect.value;
 
   let q = query(
@@ -168,5 +196,5 @@ searchBtn.onclick = loadApprovedProperties;
 // ✅ First load
 (async function init() {
   await loadDistricts();
-  await loadApprovedProperties();
+  await loadApprovedProperties(); // ✅ default all approved
 })();
