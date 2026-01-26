@@ -9,6 +9,7 @@ import {
   onSnapshot,
   doc,
   getDoc,
+  getDocs,
   updateDoc,
   deleteDoc,
   addDoc,
@@ -34,6 +35,14 @@ const adminTypeFilter = document.getElementById("adminTypeFilter");
 
 const form = document.getElementById("form");
 
+// ✅ Location Inputs (Admin Add Form)
+const districtSelect = document.getElementById("district");
+const blockSelect = document.getElementById("block");
+const villageInput = document.getElementById("village");
+const villageList = document.getElementById("villageList");
+
+let currentUser = null;
+
 // ✅ Logout
 if (logoutBtn) {
   logoutBtn.onclick = async () => {
@@ -53,8 +62,6 @@ document.querySelectorAll(".tabBtn").forEach((btn) => {
     document.getElementById(tab).classList.remove("hidden");
   };
 });
-
-let currentUser = null;
 
 // ✅ Auth Check Admin
 listenUser(async (u) => {
@@ -76,8 +83,94 @@ listenUser(async (u) => {
   loadPayments();
   loadPendingProperties();
   loadApprovedProperties();
+
+  // ✅ Load District/Block/Village dropdowns
+  await loadDistrictsForAdmin();
 });
 
+// ======================================
+// ✅ Load District / Block / Village for Admin form
+// ======================================
+async function loadDistrictsForAdmin() {
+  if (!districtSelect) return;
+
+  districtSelect.innerHTML = `<option value="">Select District</option>`;
+  if (blockSelect) blockSelect.innerHTML = `<option value="">Select Block</option>`;
+  if (villageInput) villageInput.value = "";
+  if (villageList) villageList.innerHTML = "";
+
+  const snap = await getDoc(doc(db, "locations", "Chhattisgarh"));
+  if (!snap.exists()) return;
+
+  const districts = snap.data().districts || [];
+
+  districts.forEach((d) => {
+    districtSelect.innerHTML += `<option value="${d}">${d}</option>`;
+  });
+}
+
+async function loadBlocksForAdmin(districtName) {
+  if (!blockSelect) return;
+
+  blockSelect.innerHTML = `<option value="">Select Block</option>`;
+  if (villageInput) villageInput.value = "";
+  if (villageList) villageList.innerHTML = "";
+
+  if (!districtName) return;
+
+  const snap = await getDoc(doc(db, "blocks", districtName.trim()));
+  if (!snap.exists()) return;
+
+  const blocks = snap.data().blocks || [];
+  blocks.forEach((b) => {
+    blockSelect.innerHTML += `<option value="${b}">${b}</option>`;
+  });
+}
+
+async function loadVillagesForAdmin(districtName, blockName) {
+  if (!villageList) return;
+
+  villageList.innerHTML = "";
+  if (villageInput) villageInput.value = "";
+
+  if (!districtName || !blockName) return;
+
+  // ✅ Chunk mode villages read
+  const q = query(
+    collection(db, "villages"),
+    where("district", "==", districtName.trim()),
+    where("block", "==", blockName.trim()),
+    orderBy("part", "asc")
+  );
+
+  const snap = await getDocs(q);
+
+  let all = [];
+  snap.forEach((d) => {
+    const data = d.data();
+    all = all.concat(data.villages || []);
+  });
+
+  all = Array.from(new Set(all)).sort();
+
+  all.forEach((v) => {
+    const opt = document.createElement("option");
+    opt.value = v;
+    villageList.appendChild(opt);
+  });
+}
+
+if (districtSelect) {
+  districtSelect.onchange = async () => {
+    await loadBlocksForAdmin(districtSelect.value);
+  };
+}
+
+if (blockSelect) {
+  blockSelect.onchange = async () => {
+    await loadVillagesForAdmin(districtSelect.value, blockSelect.value);
+  };
+}
 
 // ======================================
 // ✅ KYC REQUESTS (Approve/Reject)
@@ -155,7 +248,6 @@ window.rejectKyc = async function (kycDocId, uid) {
   alert("❌ KYC Rejected!");
 };
 
-
 // ======================================
 // ✅ PAYMENTS (Approve/Reject)
 // ======================================
@@ -220,9 +312,8 @@ window.rejectPayment = async function (paymentId) {
   alert("❌ Payment Rejected!");
 };
 
-
 // ======================================
-// ✅ PROPERTIES (Pending) + WhatsApp button
+// ✅ PROPERTIES (Pending) + WhatsApp
 // ======================================
 let allPendingProps = [];
 
@@ -268,11 +359,16 @@ function renderPendingProps() {
   }
 
   filtered.forEach((p) => {
-    const w = (p.whatsapp || "").replace(/\D/g, ""); // ✅ numbers only
+    const w = (p.whatsapp || "").replace(/\D/g, "");
 
     pendingProps.innerHTML += `
       <div class="card">
         <h3>🏠 ${p.title || ""}</h3>
+
+        <p class="small"><b>District:</b> ${p.district || ""}</p>
+        <p class="small"><b>Block:</b> ${p.block || ""}</p>
+        <p class="small"><b>Village:</b> ${p.village || ""}</p>
+
         <p class="small"><b>City:</b> ${p.city || ""}</p>
         <p class="small"><b>State:</b> ${p.state || ""}</p>
         <p class="small"><b>Type:</b> ${p.type || ""}</p>
@@ -323,7 +419,6 @@ window.rejectProperty = async function (propId) {
   alert("❌ Property Rejected!");
 };
 
-
 // ======================================
 // ✅ APPROVED PROPERTIES + WhatsApp button
 // ======================================
@@ -350,6 +445,10 @@ function loadApprovedProperties() {
       approvedProps.innerHTML += `
         <div class="card">
           <h3>✅ ${p.title || ""}</h3>
+          <p class="small"><b>District:</b> ${p.district || ""}</p>
+          <p class="small"><b>Block:</b> ${p.block || ""}</p>
+          <p class="small"><b>Village:</b> ${p.village || ""}</p>
+
           <p class="small"><b>City:</b> ${p.city || ""}</p>
           <p class="small"><b>Type:</b> ${p.type || ""}</p>
           <p class="small"><b>Price:</b> ${p.price || ""}</p>
@@ -376,7 +475,6 @@ window.deleteApprovedProperty = async function (propId) {
   alert("🗑 Property Deleted!");
 };
 
-
 // ======================================
 // ✅ ADD PROPERTY SAVE (Admin)
 // ======================================
@@ -394,8 +492,18 @@ if (form) {
     const ownerPhone = document.getElementById("ownerPhone").value.trim();
     const whatsapp = document.getElementById("whatsapp").value.trim();
 
+    // ✅ NEW: Location fields
+    const district = districtSelect ? districtSelect.value.trim() : "";
+    const block = blockSelect ? blockSelect.value.trim() : "";
+    const village = villageInput ? villageInput.value.trim() : "";
+
     if (!title || !city || !type || !price || !description) {
       alert("Please fill required fields!");
+      return;
+    }
+
+    if (!district || !block || !village) {
+      alert("Please select District + Block + Village!");
       return;
     }
 
@@ -403,12 +511,15 @@ if (form) {
       title,
       city,
       state,
+      district,
+      block,
+      village,
       type,
       price,
       description,
       ownerName,
       ownerPhone,
-      whatsapp, // ✅ Added
+      whatsapp,
       status: "PENDING",
       createdAt: serverTimestamp(),
       createdBy: currentUser?.uid || ""
@@ -416,5 +527,10 @@ if (form) {
 
     alert("✅ Property Saved! Status: PENDING");
     form.reset();
+
+    // ✅ Reset location inputs
+    if (blockSelect) blockSelect.innerHTML = `<option value="">Select Block</option>`;
+    if (villageInput) villageInput.value = "";
+    if (villageList) villageList.innerHTML = "";
   };
-}
+    }
