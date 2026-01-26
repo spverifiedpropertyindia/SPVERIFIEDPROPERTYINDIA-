@@ -88,9 +88,11 @@
   import { db } from "./js/firebase.js";
   import { listenUser } from "./js/auth.js";
 
+  // ✅ updateDoc added
   import {
     doc, getDoc,
     addDoc, collection,
+    updateDoc,
     serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
@@ -114,6 +116,17 @@
     const role = document.getElementById("role").value;
     const plan = document.getElementById("plan").value;
     amountInput.value = PRICES[role][plan];
+
+    // ✅ OPTIONAL: Free plan pe UTR hide/show
+    const amount = Number(amountInput.value || 0);
+    const utrField = document.getElementById("utr");
+    const utrBox = utrField.parentElement;
+
+    if(amount === 0){
+      utrBox.style.display = "none";
+    }else{
+      utrBox.style.display = "block";
+    }
   }
 
   // ✅ initial update
@@ -244,7 +257,7 @@
     `;
   };
 
-  // ✅ Submit UTR (Compulsory validation)
+  // ✅ Submit Payment / Activate Plan
   window.submitPayment = async function(){
     if(!currentUser) return;
 
@@ -255,7 +268,26 @@
     const utrInput = document.getElementById("utr");
     const utr = utrInput.value.trim();
 
-    // ✅ Compulsory UTR
+    // ✅ FREE PLAN: Direct Activate
+    if(amount === 0){
+
+      await updateDoc(doc(db,"users",currentUser.uid),{
+        planRole: role,
+        planType: plan,
+        planAmount: 0,
+        planStatus: "ACTIVE",
+        paymentMode: "FREE",
+        utr: "",
+        planUpdatedAt: serverTimestamp()
+      });
+
+      msg.innerHTML = "✅ Free Plan Activated Successfully!";
+      alert("✅ Free Plan Activated Successfully!");
+      utrInput.value = "";
+      return;
+    }
+
+    // ✅ Paid Plan => UTR compulsory
     if(!utr){
       alert("❌ UTR required!");
       utrInput.focus();
@@ -295,4 +327,4 @@
 </script>
 
 </body>
-  </html>
+      </html>
