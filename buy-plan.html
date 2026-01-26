@@ -50,7 +50,7 @@
     <label>Amount (Auto)</label>
     <input id="amount" readonly />
 
-    <!-- ✅ Backup Button (PAID PLAN ONLY => BASIC me HIDE) -->
+    <!-- ✅ QR Button always visible -->
     <div style="margin-top:12px;" id="qrBtnBox">
       <button class="btn" style="width:100%;" onclick="generateQR()">
         Generate QR & Pay (Backup)
@@ -61,7 +61,7 @@
 
     <hr style="margin:14px 0;border:0;border-top:1px solid #eee;"/>
 
-    <!-- ✅ UTR BOX (PAID PLAN ONLY => BASIC me HIDE) -->
+    <!-- ✅ UTR Box (BASIC me hide hoga) -->
     <div id="utrBox">
       <h2>Submit Transaction (UTR)</h2>
       <p class="small">Payment ke baad UTR submit karein. Admin approve karega.</p>
@@ -114,7 +114,7 @@
     BROKER:{ BASIC: 0, STANDARD: 499, PREMIUM: 699 }
   };
 
-  // ✅ Amount update + BASIC me UTR/QR hide
+  // ✅ Amount update + BASIC me UTR hide
   function updateAmount(){
     const role = document.getElementById("role").value;
     const plan = document.getElementById("plan").value;
@@ -124,19 +124,14 @@
 
     const utrBox = document.getElementById("utrBox");
     const utrInput = document.getElementById("utr");
-    const qrBtnBox = document.getElementById("qrBtnBox");
 
-    // ✅ BASIC (FREE) => UTR & QR hide
+    // ✅ BASIC (FREE) => UTR hide + clear
     if(amount === 0){
       utrBox.style.display = "none";
-      qrBtnBox.style.display = "none";
-      payBox.innerHTML = "";
       utrInput.value = "";
-      msg.innerHTML = "✅ BASIC (Free) plan selected. No payment needed. Submit to Activate.";
+      msg.innerHTML = "✅ BASIC (Free) plan selected. No UTR needed. Submit to Activate.";
     }else{
-      // ✅ Paid plans => Show UTR & QR
       utrBox.style.display = "block";
-      qrBtnBox.style.display = "block";
       msg.innerHTML = "";
     }
   }
@@ -154,7 +149,7 @@
     currentUser = u;
     const isAdmin = (u.email === ADMIN_EMAIL);
 
-    // ✅ Admin UI (NO RETURN HERE ✅)
+    // ✅ Admin UI
     if(isAdmin){
       if(adminLink) adminLink.style.display = "inline-block";
       if(adminBox){
@@ -168,8 +163,7 @@
           </div>
         `;
       }
-      // ✅ DO NOT RETURN ✅
-      return;
+      return; // ✅ Admin ke liye KYC skip
     }
 
     // ✅ Normal user must have KYC approved
@@ -191,7 +185,7 @@
     msg.innerHTML = "✅ Please enter UTR / Transaction ID and Submit for Approval.";
   };
 
-  // ✅ Auto open UPI App on select plan/role (PAID PLANS ONLY)
+  // ✅ Auto open UPI App (PAID PLANS ONLY)
   window.payNowUPI = function(){
     updateAmount();
 
@@ -199,9 +193,10 @@
     const plan = document.getElementById("plan").value;
     const amount = PRICES[role][plan];
 
+    // ✅ clear old box
     payBox.innerHTML = "";
 
-    // ✅ BASIC => No UPI popup
+    // ✅ BASIC => No UPI popup, no UPI open
     if(amount === 0){
       msg.innerHTML = "✅ BASIC (Free) plan selected. No payment needed. Submit to Activate.";
       return;
@@ -227,7 +222,7 @@
             ✅ I Have Paid (Enter UTR)
           </button>
           <p class="small" style="margin-top:8px;color:#777;">
-            Agar UPI app open nahi hua to नीचे "Generate QR & Pay (Backup)" use karein.
+            Agar UPI app open nahi hua to "Generate QR & Pay (Backup)" use karein.
           </p>
         </div>
       `;
@@ -236,24 +231,13 @@
     window.location.href = upiUrl;
   };
 
-  // ✅ Backup: Generate QR (PAID PLANS ONLY)
+  // ✅ Generate QR (BASIC me bhi ₹0 QR generate hoga)
   window.generateQR = function(){
     updateAmount();
 
     const role = document.getElementById("role").value;
     const plan = document.getElementById("plan").value;
     const amount = PRICES[role][plan];
-
-    // ✅ BASIC => QR generate nahi
-    if(amount === 0){
-      payBox.innerHTML = `
-        <div style="text-align:center;">
-          <h3>✅ BASIC (Free) Plan</h3>
-          <p class="small">Payment required nahi hai.</p>
-        </div>
-      `;
-      return;
-    }
 
     const note = `${role}-${plan}-Plan`;
     const upiUrl = `upi://pay?pa=${UPI_ID}&pn=SP%20Verified%20Property%20India&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`;
@@ -264,7 +248,12 @@
         <h3>Scan & Pay ₹${amount}</h3>
         <img src="${qrUrl}" style="border-radius:16px;border:1px solid #eee;margin-top:10px;" />
         <p class="small" style="margin-top:8px;"><b>UPI:</b> ${UPI_ID}</p>
-        <p class="small" style="color:#777;">✅ Payment ke baad UTR niche submit karein</p>
+
+        ${
+          amount === 0
+            ? `<p class="small" style="color:#777;">✅ BASIC Free Plan (Payment required nahi). Direct Activate kar sakte ho ✅</p>`
+            : `<p class="small" style="color:#777;">✅ Payment ke baad UTR niche submit karein</p>`
+        }
       </div>
     `;
   };
@@ -280,7 +269,7 @@
     const utrInput = document.getElementById("utr");
     const utr = (utrInput ? utrInput.value.trim() : "");
 
-    // ✅ FREE PLAN: Direct Activate
+    // ✅ BASIC (FREE) => Direct Activate (UTR not required)
     if(amount === 0){
       await updateDoc(doc(db,"users",currentUser.uid),{
         planRole: role,
@@ -298,7 +287,7 @@
       return;
     }
 
-    // ✅ Paid Plan => UTR compulsory
+    // ✅ Paid plans => UTR compulsory
     if(!utr){
       alert("❌ UTR required!");
       if(utrInput) utrInput.focus();
