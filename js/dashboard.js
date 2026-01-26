@@ -3,243 +3,149 @@ import { listenUser, logoutUser } from "./auth.js";
 
 import {
   doc, getDoc,
-  collection, query, where, orderBy, onSnapshot,
-  getDocs, writeBatch
+  collection, query, where, getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-const logoutBtn = document.getElementById("logoutBtn");
-const userEmail = document.getElementById("userEmail");
-
+const userEmailEl = document.getElementById("userEmail");
 const kycStatusEl = document.getElementById("kycStatus");
 const planStatusEl = document.getElementById("planStatus");
 const planExpiryEl = document.getElementById("planExpiry");
 const remainListingsEl = document.getElementById("remainListings");
+const infoMsgEl = document.getElementById("infoMsg");
+const myPropsEl = document.getElementById("myProps");
 
-const infoMsg = document.getElementById("infoMsg");
-const addBtn = document.getElementById("addBtn");
+const logoutBtn = document.getElementById("logoutBtn");
 
-const myProps = document.getElementById("myProps");
-
-// ✅ Safe date converter
-function toDateSafe(val){
-  try{
-    if(!val) return null;
-
-    // Firestore Timestamp
-    if(typeof val === "object" && val.seconds){
-      return new Date(val.seconds * 1000);
-    }
-
-    // ISO string
-    return new Date(val);
-  }catch(e){
-    return null;
-  }
-}
-
-// ✅ plan active check
-function isPlanActive(userData){
-  if(!userData) return false;
-
-  if(userData.planStatus !== "ACTIVE") return false;
-
-  const exp = toDateSafe(userData.planExpiryAt);
-  if(!exp) return false;
-
-  return exp.getTime() > Date.now();
-}
-
-// ✅ days remaining
-function planDaysRemaining(userData){
-  const exp = toDateSafe(userData.planExpiryAt);
-  if(!exp) return 0;
-
-  const diff = exp.getTime() - Date.now();
-  const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-  return days > 0 ? days : 0;
-}
-
-// ✅ Logout
-if(logoutBtn){
-  logoutBtn.onclick = async ()=>{
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", async () => {
     await logoutUser();
     location.href = "login.html";
-  };
-}
-
-// ✅ Main
-listenUser(async (u)=>{
-  if(!u){
-    alert("Login required!");
-    location.href = "login.html";
-    return;
-  }
-
-  if(userEmail) userEmail.innerText = u.email;
-
-  // ✅ Load user data
-  const userSnap = await getDoc(doc(db, "users", u.uid));
-
-  let userData = {};
-  if(userSnap.exists()){
-    userData = userSnap.data();
-  }
-
-  // ✅ KYC Status
-  const kycStatus = userData.kycStatus || "NOT_SUBMITTED";
-  if(kycStatusEl) kycStatusEl.innerText = kycStatus;
-
-  // ✅ Plan Status
-  const planStatus = userData.planStatus || "INACTIVE";
-  if(planStatusEl) planStatusEl.innerText = planStatus;
-
-  // ✅ Expiry show
-  const expDateObj = toDateSafe(userData.planExpiryAt);
-  const expLabel = expDateObj ? expDateObj.toDateString() : "--";
-  if(planExpiryEl) planExpiryEl.innerText = expLabel;
-
-  // ✅ Listing limits
-  const LIMITS = { BASIC: 3, STANDARD: 10, PREMIUM: 25 };
-
-  // ✅ new system uses planType
-  const planName = userData.planType || "BASIC";
-  const maxListings = LIMITS[planName] || 0;
-
-  // ✅ Plan active?
-  const active = isPlanActive(userData);
-  const remainingDays = planDaysRemaining(userData);
-
-  // ✅ Auto Expire Approved Properties when plan expires
-  if(!active){
-    await expireUserProperties(u.uid);
-  }
-
-  // ✅ UI messages + Add Property allow/deny
-  if(kycStatus !== "APPROVED"){
-    if(infoMsg){
-      infoMsg.innerHTML = `⚠️ आपका KYC <b>${kycStatus}</b> है। पहले <b>KYC Approved</b> कराओ।`;
-    }
-    if(addBtn){
-      addBtn.style.pointerEvents = "none";
-      addBtn.style.opacity = "0.5";
-      addBtn.innerText = "Add Property (KYC Required)";
-    }
-    if(remainListingsEl) remainListingsEl.innerText = "0";
-
-    loadMyProperties(u.uid, maxListings, false);
-    return;
-  }
-
-  if(!active){
-    if(infoMsg){
-      infoMsg.innerHTML = `⚠️ आपका प्लान Active नहीं है या Expire हो गया है। पहले <b>Buy / Renew Plan</b> करें।`;
-    }
-    if(addBtn){
-      addBtn.style.pointerEvents = "none";
-      addBtn.style.opacity = "0.5";
-      addBtn.innerText = "Add Property (Plan Required)";
-    }
-    if(remainListingsEl) remainListingsEl.innerText = "0";
-  }else{
-    if(infoMsg){
-      infoMsg.innerHTML = `✅ आपका प्लान Active है। (<b>${planName}</b>) - Expiry in <b>${remainingDays}</b> days`;
-    }
-    if(addBtn){
-      addBtn.style.pointerEvents = "auto";
-      addBtn.style.opacity = "1";
-      addBtn.innerText = "Add Property";
-    }
-    if(remainListingsEl) remainListingsEl.innerText = maxListings.toString();
-  }
-
-  // ✅ Load My Properties
-  loadMyProperties(u.uid, maxListings, active);
-});
-
-// ✅ My Properties List
-function loadMyProperties(uid, maxListings, planActive){
-  if(!myProps) return;
-
-  const q = query(
-    collection(db, "properties"),
-    where("createdBy", "==", uid),
-    orderBy("createdAt", "desc")
-  );
-
-  onSnapshot(q, (snap)=>{
-    myProps.innerHTML = "";
-
-    let count = 0;
-
-    snap.forEach((d)=>{
-      count++;
-      const p = d.data();
-
-      const card = document.createElement("div");
-      card.className = "card";
-
-      card.innerHTML = `
-        <h3>${p.title || "Property"}</h3>
-        <p class="small"><b>District:</b> ${p.district || ""}</p>
-        <p class="small"><b>Block:</b> ${p.block || ""}</p>
-        <p class="small"><b>Village:</b> ${p.village || ""}</p>
-        <p class="small"><b>Type:</b> ${p.type || ""}</p>
-        <p class="small"><b>Price:</b> ${p.price || ""}</p>
-        <p class="small"><b>Status:</b> ${p.status || "PENDING"}</p>
-      `;
-
-      myProps.appendChild(card);
-    });
-
-    // ✅ Remaining listings update
-    if(planActive){
-      let remaining = maxListings - count;
-      if(remaining < 0) remaining = 0;
-
-      if(remainListingsEl) remainListingsEl.innerText = remaining.toString();
-
-      // ✅ If limit over, block Add Property
-      if(addBtn && remaining <= 0){
-        addBtn.style.pointerEvents = "none";
-        addBtn.style.opacity = "0.5";
-        addBtn.innerText = "Limit Reached";
-
-        if(infoMsg){
-          infoMsg.innerHTML = `⚠️ आपकी listing limit खत्म हो गई है। अधिक listing के लिए <b>Upgrade Plan</b> करें।`;
-        }
-      }
-    }
-
-    if(count === 0){
-      myProps.innerHTML = `<p class="small">No properties yet. Add your first property ✅</p>`;
-    }
   });
 }
 
-// ✅ Auto Expire Approved Properties when plan expires
-async function expireUserProperties(uid){
-  try{
-    const q = query(
-      collection(db, "properties"),
-      where("createdBy", "==", uid),
-      where("status", "==", "APPROVED")
-    );
+// ✅ Plan Days logic
+const PLAN_DAYS = {
+  BASIC: 28,
+  STANDARD: 56,
+  PREMIUM: 84
+};
 
-    const snap = await getDocs(q);
-    if(snap.empty) return;
+// ✅ Listing Limits (aap chahe to change kar lena)
+const LISTING_LIMIT = {
+  BASIC: 5,
+  STANDARD: 15,
+  PREMIUM: 50
+};
 
-    const batch = writeBatch(db);
+function formatDate(dateObj) {
+  const d = String(dateObj.getDate()).padStart(2, "0");
+  const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const y = dateObj.getFullYear();
+  return `${d}-${m}-${y}`;
+}
 
-    snap.forEach((d)=>{
-      batch.update(doc(db, "properties", d.id), {
-        status: "EXPIRED",
-        expiredAt: new Date().toISOString()
-      });
-    });
+function calcExpiry(planType, planUpdatedAt) {
+  if (!planType || !PLAN_DAYS[planType] || !planUpdatedAt) return null;
 
-    await batch.commit();
-    console.log("✅ Auto Expired properties (plan expired)");
-  }catch(err){
-    console.log("❌ Expire error:", err);
+  const start = planUpdatedAt.toDate ? planUpdatedAt.toDate() : null;
+  if (!start) return null;
+
+  const expiry = new Date(start);
+  expiry.setDate(expiry.getDate() + PLAN_DAYS[planType]);
+  return expiry;
+}
+
+listenUser(async (u) => {
+  if (!u) {
+    location.href = "login.html";
+    return;
   }
-                                }
+
+  userEmailEl.innerText = u.email;
+
+  // ✅ Load user doc
+  const userSnap = await getDoc(doc(db, "users", u.uid));
+  if (!userSnap.exists()) {
+    kycStatusEl.innerText = "NOT FOUND";
+    planStatusEl.innerText = "NOT FOUND";
+    planExpiryEl.innerText = "--";
+    remainListingsEl.innerText = "0";
+    infoMsgEl.innerText = "❌ User data not found in database.";
+    return;
+  }
+
+  const ud = userSnap.data();
+
+  // ✅ KYC Status
+  const kycStatus = ud.kycStatus || "PENDING";
+  kycStatusEl.innerText = kycStatus;
+
+  // ✅ Plan Status + Plan Type
+  const planStatus = ud.planStatus || "NOT ACTIVE";
+  const planType = ud.planType || "BASIC";
+
+  // show plan status readable
+  planStatusEl.innerText = `${planStatus} (${planType})`;
+
+  // ✅ Expiry calculation (based on planUpdatedAt)
+  const expiryDate = calcExpiry(planType, ud.planUpdatedAt);
+
+  if (planStatus !== "ACTIVE") {
+    planExpiryEl.innerText = "—";
+  } else if (!expiryDate) {
+    planExpiryEl.innerText = "ACTIVE";
+  } else {
+    const today = new Date();
+    const diffMs = expiryDate.getTime() - today.getTime();
+    const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    if (daysLeft <= 0) {
+      planExpiryEl.innerText = "EXPIRED";
+    } else {
+      planExpiryEl.innerText = `${formatDate(expiryDate)} (${daysLeft}d left)`;
+    }
+  }
+
+  // ✅ Listings Remaining logic
+  const limit = LISTING_LIMIT[planType] || 5;
+
+  // Count user properties
+  const q = query(collection(db, "properties"), where("uid", "==", u.uid));
+  const propsSnap = await getDocs(q);
+  const totalProps = propsSnap.size;
+
+  const remaining = Math.max(limit - totalProps, 0);
+  remainListingsEl.innerText = remaining;
+
+  // ✅ Info Message
+  if (kycStatus !== "APPROVED") {
+    infoMsgEl.innerText = "⚠️ KYC Pending: Pehle KYC approve karvao.";
+  } else if (planStatus !== "ACTIVE") {
+    infoMsgEl.innerText = "⚠️ Plan Active nahi hai: Buy / Renew Plan karo.";
+  } else {
+    infoMsgEl.innerText = "✅ Everything looks good! You can add properties.";
+  }
+
+  // ✅ Show My Properties (basic view)
+  myPropsEl.innerHTML = "";
+
+  if (propsSnap.empty) {
+    myPropsEl.innerHTML = `<p class="small">No properties added yet.</p>`;
+    return;
+  }
+
+  propsSnap.forEach((docx) => {
+    const p = docx.data();
+    const title = p.title || p.propertyTitle || "Property";
+    const city = p.city || "";
+    const price = p.price || "";
+
+    myPropsEl.innerHTML += `
+      <div class="box">
+        <h3>${title}</h3>
+        <p class="small">📍 ${city}</p>
+        <p class="small">💰 ${price}</p>
+      </div>
+    `;
+  });
+});
