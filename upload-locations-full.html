@@ -15,10 +15,10 @@
 
   <hr style="margin:18px 0;"/>
 
-  <p><b>Step 2:</b> Upload Villages using JSON file (Census Data)</p>
+  <p><b>Step 2:</b> Upload Villages using JSON file (Chunk Mode)</p>
   <input type="file" id="villageJsonFile" accept=".json" />
   <button id="uploadVillagesBtn" style="padding:12px 16px;font-size:16px;">
-    ✅ Upload Villages JSON
+    ✅ Upload Villages JSON (Chunk Upload)
   </button>
 
   <p id="status" style="margin-top:15px;color:green;"></p>
@@ -39,7 +39,7 @@
       "Sarangarh Bilaigarh","Sukma","Surajpur","Surguja","Khairagarh Chhuikhadan Gandai"
     ];
 
-    // ✅ FULL District -> Blocks (Best-effort Full List)
+    // ✅ District -> Blocks (Best effort full)
     const BLOCKS_BY_DISTRICT = {
       "Raipur": ["Abhanpur","Arang","Tilda","Dharsiwa"],
       "Durg": ["Durg","Patan","Dhamdha"],
@@ -73,11 +73,10 @@
       "Narayanpur": ["Narayanpur","Orchha"],
       "Dantewada": ["Dantewada","Katekalyan","Kuakonda"],
       "Bijapur": ["Bijapur","Bhairamgarh","Usoor","Bhopalpatnam"],
-      "Sukma": ["Sukma","Chhindgarh","Kont"],
-      "Surguja": ["Ambikapur","Lundra","Sitapur","Udaipur","Batauli","Lakhanpur"]
+      "Sukma": ["Sukma","Chhindgarh","Kont"]
     };
 
-    // ✅ Step 1: Upload districts + blocks
+    // ✅ Step 1 Upload
     document.getElementById("uploadDistrictBlocksBtn").onclick = async () => {
       status.innerHTML = "⏳ Uploading districts + blocks...";
 
@@ -97,7 +96,7 @@
       alert("✅ Done! District + Blocks uploaded.");
     };
 
-    // ✅ Step 2: Upload villages JSON
+    // ✅ Step 2 Upload Villages (Chunk Mode)
     document.getElementById("uploadVillagesBtn").onclick = async () => {
       const fileInput = document.getElementById("villageJsonFile");
       if (!fileInput.files[0]) {
@@ -106,35 +105,51 @@
       }
 
       status.innerHTML = "⏳ Reading villages JSON file...";
-
       const text = await fileInput.files[0].text();
       const data = JSON.parse(text);
 
-      status.innerHTML = "⏳ Uploading villages to Firestore...";
+      status.innerHTML = "⏳ Uploading villages to Firestore (Chunk Mode)...";
 
-      let districtCount = 0;
-      let blockCount = 0;
+      // ✅ split in chunks
+      function chunkArray(arr, size = 500) {
+        const out = [];
+        for (let i = 0; i < arr.length; i += size) {
+          out.push(arr.slice(i, i + size));
+        }
+        return out;
+      }
+
+      let totalDocs = 0;
 
       for (const districtName of Object.keys(data)) {
-        districtCount++;
-
-        const blocksObj = data[districtName];
+        const blocksObj = data[districtName] || {};
 
         for (const blockName of Object.keys(blocksObj)) {
-          blockCount++;
-
           const villages = blocksObj[blockName] || [];
 
-          await setDoc(doc(db, "villages", blockName), {
-            district: districtName,
-            block: blockName,
-            villages: villages
-          });
+          const cleanDistrict = String(districtName).trim();
+          const cleanBlock = String(blockName).trim();
+
+          const chunks = chunkArray(villages, 500);
+
+          for (let i = 0; i < chunks.length; i++) {
+            const docId = `${cleanDistrict}_${cleanBlock}_${i + 1}`;
+
+            await setDoc(doc(db, "villages", docId), {
+              district: cleanDistrict,
+              block: cleanBlock,
+              part: i + 1,
+              totalParts: chunks.length,
+              villages: chunks[i]
+            });
+
+            totalDocs++;
+          }
         }
       }
 
-      status.innerHTML = `✅ Villages uploaded! Districts: ${districtCount}, Blocks: ${blockCount}`;
-      alert("✅ Villages upload completed!");
+      status.innerHTML = `✅ Villages uploaded in chunks! Total docs: ${totalDocs}`;
+      alert("✅ Villages upload completed (Chunk Mode)!");
     };
   </script>
 
