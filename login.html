@@ -24,6 +24,8 @@
       <button class="btn" id="googleBtn" style="margin-top:14px;width:100%;">
         Continue with Google
       </button>
+
+      <p class="small" id="msg" style="margin-top:10px;"></p>
     </div>
   </div>
 
@@ -38,15 +40,23 @@
   <script type="module">
     import { googleLogin, handleRedirectLogin } from "./js/auth.js";
 
+    const msg = document.getElementById("msg");
+
     // ✅ Redirect se wapas aaya to dashboard open
-    const user = await handleRedirectLogin();
-    if(user){
-      location.href = "dashboard.html";
+    try{
+      const user = await handleRedirectLogin();
+      if(user){
+        msg.innerHTML = "✅ Login successful! Redirecting...";
+        setTimeout(()=> location.href = "dashboard.html", 500);
+      }
+    }catch(e){
+      console.log(e);
     }
 
-    // ✅ Button click se redirect login start
+    // ✅ Button click
     document.getElementById("googleBtn").onclick = async () => {
-      await googleLogin();
+      msg.innerHTML = "⏳ Opening Google login...";
+      await googleLogin(); // ✅ Redirect login start
     };
   </script>
 
