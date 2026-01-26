@@ -46,6 +46,8 @@ async function loadBlocks(districtName) {
 
   if (!districtName) return;
 
+  districtName = districtName.trim();
+
   const snap = await getDoc(doc(db, "blocks", districtName));
   if (!snap.exists()) return;
 
@@ -57,18 +59,34 @@ async function loadBlocks(districtName) {
   });
 }
 
-// ✅ Load villages block-wise
+// ✅ ✅ Load villages (Chunk Mode)
 async function loadVillages(blockName) {
   villageSelect.innerHTML = `<option value="">All Village</option>`;
   if (!blockName) return;
 
-  const snap = await getDoc(doc(db, "villages", blockName));
-  if (!snap.exists()) return;
+  const district = districtSelect.value.trim();
+  blockName = blockName.trim();
 
-  const data = snap.data();
-  const villages = data.villages || [];
+  // ✅ Read all chunk docs for this district+block
+  const q = query(
+    collection(db, "villages"),
+    where("district", "==", district),
+    where("block", "==", blockName),
+    orderBy("part", "asc")
+  );
 
-  villages.forEach((v) => {
+  const snap = await getDocs(q);
+
+  let allVillages = [];
+  snap.forEach((d) => {
+    const data = d.data();
+    allVillages = allVillages.concat(data.villages || []);
+  });
+
+  // ✅ Unique + sort
+  allVillages = Array.from(new Set(allVillages)).sort();
+
+  allVillages.forEach((v) => {
     villageSelect.innerHTML += `<option value="${v}">${v}</option>`;
   });
 }
@@ -100,7 +118,6 @@ function renderProperties(arr) {
         <p class="small"><b>District:</b> ${p.district || ""}</p>
         <p class="small"><b>Block:</b> ${p.block || ""}</p>
         <p class="small"><b>Village:</b> ${p.village || ""}</p>
-        <p class="small"><b>City:</b> ${p.city || ""}</p>
         <p class="small"><b>Type:</b> ${p.type || ""}</p>
         <p class="small"><b>Price:</b> ${p.price || ""}</p>
 
@@ -126,14 +143,12 @@ async function loadApprovedProperties() {
   const village = villageSelect.value;
   const type = typeSelect.value;
 
-  // ✅ Base query
   let q = query(
     collection(db, "properties"),
     where("status", "==", "APPROVED"),
     orderBy("createdAt", "desc")
   );
 
-  // ✅ Filters (optional)
   if (district) q = query(q, where("district", "==", district));
   if (block) q = query(q, where("block", "==", block));
   if (village) q = query(q, where("village", "==", village));
@@ -148,11 +163,10 @@ async function loadApprovedProperties() {
   renderProperties(arr);
 }
 
-// ✅ Search Button
 searchBtn.onclick = loadApprovedProperties;
 
 // ✅ First load
 (async function init() {
   await loadDistricts();
-  await loadApprovedProperties(); // ✅ by default ALL approved show
+  await loadApprovedProperties();
 })();
