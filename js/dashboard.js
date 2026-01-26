@@ -20,35 +20,38 @@ const addBtn = document.getElementById("addBtn");
 
 const myProps = document.getElementById("myProps");
 
+// ✅ Safe date converter
 function toDateSafe(val){
   try{
     if(!val) return null;
 
-    // Firestore Timestamp case
+    // Firestore Timestamp
     if(typeof val === "object" && val.seconds){
       return new Date(val.seconds * 1000);
     }
 
-    // ISO string case
+    // ISO string
     return new Date(val);
   }catch(e){
     return null;
   }
 }
 
+// ✅ plan active check (NEW: planExpiryAt)
 function isPlanActive(userData){
   if(!userData) return false;
 
   if(userData.planStatus !== "ACTIVE") return false;
 
-  const exp = toDateSafe(userData.planExpiryDate);
+  const exp = toDateSafe(userData.planExpiryAt);
   if(!exp) return false;
 
   return exp.getTime() > Date.now();
 }
 
+// ✅ days remaining
 function planDaysRemaining(userData){
-  const exp = toDateSafe(userData.planExpiryDate);
+  const exp = toDateSafe(userData.planExpiryAt);
   if(!exp) return 0;
 
   const diff = exp.getTime() - Date.now();
@@ -86,36 +89,53 @@ listenUser(async (u)=>{
   const kycStatus = userData.kycStatus || "NOT_SUBMITTED";
   if(kycStatusEl) kycStatusEl.innerText = kycStatus;
 
-  // ✅ Plan Status + Expiry
+  // ✅ Plan Status
   const planStatus = userData.planStatus || "INACTIVE";
   if(planStatusEl) planStatusEl.innerText = planStatus;
 
-  // Expiry label (admin-pro.js sets planExpiryLabel also)
-  const expLabel = userData.planExpiryLabel || "--";
+  // ✅ Expiry show
+  const expDateObj = toDateSafe(userData.planExpiryAt);
+  const expLabel = expDateObj ? expDateObj.toDateString() : "--";
   if(planExpiryEl) planExpiryEl.innerText = expLabel;
 
-  // ✅ Listings remaining (simple rule)
-  // BASIC = 3, STANDARD = 10, PREMIUM = 25
+  // ✅ Listing limits
   const LIMITS = { BASIC: 3, STANDARD: 10, PREMIUM: 25 };
-  const planName = userData.planName || "BASIC";
+
+  // ✅ new system uses planType (admin-pro.js)
+  const planName = userData.planType || "BASIC";
   const maxListings = LIMITS[planName] || 0;
 
-  // ✅ Check current plan active or expired
+  // ✅ Plan active?
   const active = isPlanActive(userData);
   const remainingDays = planDaysRemaining(userData);
 
-  // ✅ NEW FEATURE: Plan expired -> Auto Expire Properties
+  // ✅ NEW FEATURE: Auto Expire Approved Properties when plan expires
   if(!active){
     await expireUserProperties(u.uid);
   }
 
   // ✅ UI messages + Add Property allow/deny
+  if(kycStatus !== "APPROVED"){
+    if(infoMsg){
+      infoMsg.innerHTML = `⚠️ आपका KYC <b>${kycStatus}</b> है। पहले <b>KYC Approved</b> कराओ।`;
+    }
+    if(addBtn){
+      addBtn.style.pointerEvents = "none";
+      addBtn.style.opacity = "0.5";
+      addBtn.innerText = "Add Property (KYC Required)";
+    }
+    if(remainListingsEl) remainListingsEl.innerText = "0";
+
+    // still load my properties
+    loadMyProperties(u.uid, maxListings, false);
+    return;
+  }
+
   if(!active){
     if(infoMsg){
       infoMsg.innerHTML = `⚠️ आपका प्लान Active नहीं है या Expire हो गया है। पहले <b>Buy / Renew Plan</b> करें।`;
     }
     if(addBtn){
-      addBtn.classList.add("disabled");
       addBtn.style.pointerEvents = "none";
       addBtn.style.opacity = "0.5";
       addBtn.innerText = "Add Property (Plan Required)";
@@ -130,8 +150,6 @@ listenUser(async (u)=>{
       addBtn.style.opacity = "1";
       addBtn.innerText = "Add Property";
     }
-
-    // Remaining listings will be calculated after loading properties
     if(remainListingsEl) remainListingsEl.innerText = maxListings.toString();
   }
 
@@ -139,13 +157,13 @@ listenUser(async (u)=>{
   loadMyProperties(u.uid, maxListings, active);
 });
 
-// ✅ My Properties List
+// ✅ My Properties List (FIXED: createdBy)
 function loadMyProperties(uid, maxListings, planActive){
   if(!myProps) return;
 
   const q = query(
     collection(db, "properties"),
-    where("uid", "==", uid),
+    where("createdBy", "==", uid),
     orderBy("createdAt", "desc")
   );
 
@@ -163,7 +181,9 @@ function loadMyProperties(uid, maxListings, planActive){
 
       card.innerHTML = `
         <h3>${p.title || "Property"}</h3>
-        <p class="small"><b>City:</b> ${p.city || ""}</p>
+        <p class="small"><b>District:</b> ${p.district || ""}</p>
+        <p class="small"><b>Block:</b> ${p.block || ""}</p>
+        <p class="small"><b>Village:</b> ${p.village || ""}</p>
         <p class="small"><b>Type:</b> ${p.type || ""}</p>
         <p class="small"><b>Price:</b> ${p.price || ""}</p>
         <p class="small"><b>Status:</b> ${p.status || "PENDING"}</p>
@@ -172,24 +192,23 @@ function loadMyProperties(uid, maxListings, planActive){
       myProps.appendChild(card);
     });
 
-    // ✅ Remaining listings update (only if plan active)
-    const remainListingsEl = document.getElementById("remainListings");
+    // ✅ Remaining listings update
     if(planActive){
       let remaining = maxListings - count;
       if(remaining < 0) remaining = 0;
+
+      const remainListingsEl = document.getElementById("remainListings");
       if(remainListingsEl) remainListingsEl.innerText = remaining.toString();
 
       // ✅ If limit over, block Add Property
       const addBtn = document.getElementById("addBtn");
-      if(addBtn){
-        if(remaining <= 0){
-          addBtn.style.pointerEvents = "none";
-          addBtn.style.opacity = "0.5";
-          addBtn.innerText = "Limit Reached";
-          const infoMsg = document.getElementById("infoMsg");
-          if(infoMsg){
-            infoMsg.innerHTML = `⚠️ आपकी listing limit खत्म हो गई है। अधिक listing के लिए <b>Upgrade Plan</b> करें।`;
-          }
+      if(addBtn && remaining <= 0){
+        addBtn.style.pointerEvents = "none";
+        addBtn.style.opacity = "0.5";
+        addBtn.innerText = "Limit Reached";
+        const infoMsg = document.getElementById("infoMsg");
+        if(infoMsg){
+          infoMsg.innerHTML = `⚠️ आपकी listing limit खत्म हो गई है। अधिक listing के लिए <b>Upgrade Plan</b> करें।`;
         }
       }
     }
@@ -200,12 +219,12 @@ function loadMyProperties(uid, maxListings, planActive){
   });
 }
 
-// ✅ NEW FEATURE FUNCTION: Auto Expire Approved Properties when plan expires
+// ✅ Auto Expire Approved Properties when plan expires (FIXED: createdBy)
 async function expireUserProperties(uid){
   try{
     const q = query(
       collection(db, "properties"),
-      where("uid", "==", uid),
+      where("createdBy", "==", uid),
       where("status", "==", "APPROVED")
     );
 
@@ -226,4 +245,4 @@ async function expireUserProperties(uid){
   }catch(err){
     console.log("❌ Expire error:", err);
   }
-}
+     }
