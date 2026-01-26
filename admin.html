@@ -104,14 +104,43 @@
           </div>
         </div>
 
+        <!-- ✅ NEW: District + Block -->
+        <div class="row">
+          <div class="col">
+            <label>District</label>
+            <select id="district" required>
+              <option value="">Select District</option>
+            </select>
+          </div>
+          <div class="col">
+            <label>Block</label>
+            <select id="block" required>
+              <option value="">Select Block</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- ✅ NEW: Village Search + WhatsApp -->
+        <div class="row">
+          <div class="col">
+            <label>Village (Search)</label>
+            <input id="village" list="villageList" placeholder="Type village..." required />
+            <datalist id="villageList"></datalist>
+          </div>
+          <div class="col">
+            <label>WhatsApp Number</label>
+            <input id="whatsapp" placeholder="8305070599" />
+          </div>
+        </div>
+
         <div class="row">
           <div class="col">
             <label>Price</label>
             <input id="price" required />
           </div>
           <div class="col">
-            <label>WhatsApp Number</label>
-            <input id="whatsapp" placeholder="Enter WhatsApp Number" />
+            <label>Owner Phone</label>
+            <input id="ownerPhone" />
           </div>
         </div>
 
@@ -124,8 +153,8 @@
             <input id="ownerName" />
           </div>
           <div class="col">
-            <label>Owner Phone</label>
-            <input id="ownerPhone" />
+            <label>Extra Notes (Optional)</label>
+            <input id="notes" placeholder="Optional..." />
           </div>
         </div>
 
@@ -143,6 +172,7 @@
 
   </div>
 
-  <script type="module" src="js/admin-pro.js"></script>
+  <!-- ✅ cache bypass -->
+  <script type="module" src="js/admin-pro.js?v=10"></script>
 </body>
-      </html>
+          </html>
