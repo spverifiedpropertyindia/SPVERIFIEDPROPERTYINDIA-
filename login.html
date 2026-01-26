@@ -38,27 +38,29 @@
   </div>
 
   <script type="module">
-    import { googleLogin, handleRedirectLogin } from "./js/auth.js";
+    import { googleLogin } from "./js/auth.js";
 
     const msg = document.getElementById("msg");
 
-    // ✅ Redirect se wapas aaya to dashboard open
-    try{
-      const user = await handleRedirectLogin();
-      if(user){
-        msg.innerHTML = "✅ Login successful! Redirecting...";
-        setTimeout(()=> location.href = "dashboard.html", 500);
-      }
-    }catch(e){
-      console.log(e);
-    }
-
-    // ✅ Button click
+    // ✅ Button click (Popup login)
     document.getElementById("googleBtn").onclick = async () => {
-      msg.innerHTML = "⏳ Opening Google login...";
-      await googleLogin(); // ✅ Redirect login start
+      try{
+        msg.innerHTML = "⏳ Opening Google login...";
+
+        const user = await googleLogin();
+
+        if(user){
+          msg.innerHTML = "✅ Login successful! Redirecting...";
+          setTimeout(()=> location.href = "dashboard.html", 500);
+        }else{
+          msg.innerHTML = "❌ Login failed, try again.";
+        }
+      }catch(e){
+        console.log(e);
+        msg.innerHTML = "❌ Error: " + (e.message || "Login error");
+      }
     };
   </script>
 
 </body>
-</html>
+  </html>
