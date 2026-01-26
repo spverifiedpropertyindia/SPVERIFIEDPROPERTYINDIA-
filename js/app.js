@@ -7,13 +7,15 @@ import {
   orderBy,
   getDocs,
   doc,
-  getDoc
+  getDoc,
+  limit,
+  startAfter
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 const districtSelect = document.getElementById("district");
 const blockSelect = document.getElementById("block");
 
-// ✅ अब village input है
+// ✅ village input + datalist
 const villageInput = document.getElementById("village");
 const villageList = document.getElementById("villageList");
 
@@ -23,12 +25,22 @@ const searchBtn = document.getElementById("searchBtn");
 const list = document.getElementById("list");
 const msg = document.getElementById("msg");
 
+const loadMoreBtn = document.getElementById("loadMoreBtn");
+
+// ✅ Pagination vars
+let lastDoc = null;
+let isLoading = false;
+
+function resetPagination() {
+  lastDoc = null;
+  if (loadMoreBtn) loadMoreBtn.style.display = "none";
+}
+
 // ✅ Load districts
 async function loadDistricts() {
   districtSelect.innerHTML = `<option value="">All District</option>`;
   blockSelect.innerHTML = `<option value="">All Block</option>`;
 
-  // ✅ clear village input + datalist
   villageInput.value = "";
   villageList.innerHTML = "";
 
@@ -46,11 +58,10 @@ async function loadDistricts() {
   });
 }
 
-// ✅ Load blocks district-wise
+// ✅ Load blocks
 async function loadBlocks(districtName) {
   blockSelect.innerHTML = `<option value="">All Block</option>`;
 
-  // ✅ clear village input + datalist
   villageInput.value = "";
   villageList.innerHTML = "";
 
@@ -69,7 +80,7 @@ async function loadBlocks(districtName) {
   });
 }
 
-// ✅ ✅ Load villages (Chunk Mode) -> datalist searchable
+// ✅ Load villages (Chunk mode) → datalist
 async function loadVillages(blockName) {
   villageInput.value = "";
   villageList.innerHTML = "";
@@ -81,7 +92,6 @@ async function loadVillages(blockName) {
 
   msg.innerHTML = "⏳ Loading villages...";
 
-  // ✅ Read all chunk docs for this district+block
   const q = query(
     collection(db, "villages"),
     where("district", "==", district),
@@ -97,10 +107,8 @@ async function loadVillages(blockName) {
     allVillages = allVillages.concat(data.villages || []);
   });
 
-  // ✅ Unique + sort
   allVillages = Array.from(new Set(allVillages)).sort();
 
-  // ✅ Fill datalist for search
   allVillages.forEach((v) => {
     const opt = document.createElement("option");
     opt.value = v;
@@ -119,17 +127,26 @@ blockSelect.onchange = async () => {
   await loadVillages(blockSelect.value);
 };
 
-// ✅ Render properties
-function renderProperties(arr) {
-  list.innerHTML = "";
-
-  if (!arr.length) {
-    list.innerHTML = `<p class="small">❌ No properties found.</p>`;
-    return;
-  }
+// ✅ Render (Append mode)
+function appendProperties(arr) {
+  if (!arr.length) return;
 
   arr.forEach((p) => {
     const whatsapp = (p.whatsapp || "").replace(/\D/g, "");
+
+    // ✅ WhatsApp Auto Message
+    const wMsg = encodeURIComponent(
+      `Hello, I am interested in this property:\n\n` +
+      `🏠 ${p.title || ""}\n` +
+      `📍 District: ${p.district || ""}\n` +
+      `🏘 Block: ${p.block || ""}\n` +
+      `🌿 Village: ${p.village || ""}\n` +
+      `💰 Price: ${p.price || ""}\n` +
+      `🏷 Type: ${p.type || ""}\n\n` +
+      `Please share more details.`
+    );
+
+    const whatsappLink = whatsapp ? `https://wa.me/91${whatsapp}?text=${wMsg}` : "";
 
     list.innerHTML += `
       <div class="card">
@@ -148,9 +165,8 @@ function renderProperties(arr) {
           </a>
 
           ${whatsapp ? `
-            <a class="btn2" target="_blank"
-               href="https://wa.me/91${whatsapp}">
-               ✅ WhatsApp
+            <a class="btn2" target="_blank" href="${whatsappLink}">
+              💬 WhatsApp
             </a>
           ` : ""}
         </div>
@@ -159,22 +175,28 @@ function renderProperties(arr) {
   });
 }
 
-// ✅ Fetch Approved Properties (Search)
-async function loadApprovedProperties() {
+// ✅ Load approved properties (Pagination)
+async function loadApprovedProperties(isFresh = false) {
+  if (isLoading) return;
+  isLoading = true;
+
+  if (isFresh) {
+    list.innerHTML = "";
+    resetPagination();
+  }
+
   msg.innerHTML = "⏳ Loading properties...";
 
   const district = districtSelect.value;
   const block = blockSelect.value;
-
-  // ✅ searchable village input
   const village = (villageInput.value || "").trim();
-
   const type = typeSelect.value;
 
   let q = query(
     collection(db, "properties"),
     where("status", "==", "APPROVED"),
-    orderBy("createdAt", "desc")
+    orderBy("createdAt", "desc"),
+    limit(12)
   );
 
   if (district) q = query(q, where("district", "==", district));
@@ -182,19 +204,47 @@ async function loadApprovedProperties() {
   if (village) q = query(q, where("village", "==", village));
   if (type) q = query(q, where("type", "==", type));
 
+  if (lastDoc) {
+    q = query(q, startAfter(lastDoc));
+  }
+
   const snap = await getDocs(q);
+
+  // ✅ No more data
+  if (snap.empty) {
+    msg.innerHTML = "✅ No more properties.";
+    if (loadMoreBtn) loadMoreBtn.style.display = "none";
+    isLoading = false;
+    return;
+  }
 
   const arr = [];
   snap.forEach((d) => arr.push({ id: d.id, ...d.data() }));
 
-  msg.innerHTML = `✅ Found: ${arr.length} properties`;
-  renderProperties(arr);
+  lastDoc = snap.docs[snap.docs.length - 1];
+
+  appendProperties(arr);
+
+  msg.innerHTML = `✅ Loaded: ${arr.length} properties`;
+
+  // ✅ show Load More if we got full page
+  if (loadMoreBtn) {
+    loadMoreBtn.style.display = (arr.length === 12) ? "inline-block" : "none";
+  }
+
+  isLoading = false;
 }
 
-searchBtn.onclick = loadApprovedProperties;
+// ✅ Search Button (fresh load)
+searchBtn.onclick = () => loadApprovedProperties(true);
+
+// ✅ Load more
+if (loadMoreBtn) {
+  loadMoreBtn.onclick = () => loadApprovedProperties(false);
+}
 
 // ✅ First load
 (async function init() {
   await loadDistricts();
-  await loadApprovedProperties(); // ✅ default all approved
+  await loadApprovedProperties(true);
 })();
