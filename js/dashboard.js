@@ -37,7 +37,7 @@ function toDateSafe(val){
   }
 }
 
-// ✅ plan active check (NEW: planExpiryAt)
+// ✅ plan active check
 function isPlanActive(userData){
   if(!userData) return false;
 
@@ -101,7 +101,7 @@ listenUser(async (u)=>{
   // ✅ Listing limits
   const LIMITS = { BASIC: 3, STANDARD: 10, PREMIUM: 25 };
 
-  // ✅ new system uses planType (admin-pro.js)
+  // ✅ new system uses planType
   const planName = userData.planType || "BASIC";
   const maxListings = LIMITS[planName] || 0;
 
@@ -109,7 +109,7 @@ listenUser(async (u)=>{
   const active = isPlanActive(userData);
   const remainingDays = planDaysRemaining(userData);
 
-  // ✅ NEW FEATURE: Auto Expire Approved Properties when plan expires
+  // ✅ Auto Expire Approved Properties when plan expires
   if(!active){
     await expireUserProperties(u.uid);
   }
@@ -126,7 +126,6 @@ listenUser(async (u)=>{
     }
     if(remainListingsEl) remainListingsEl.innerText = "0";
 
-    // still load my properties
     loadMyProperties(u.uid, maxListings, false);
     return;
   }
@@ -157,7 +156,7 @@ listenUser(async (u)=>{
   loadMyProperties(u.uid, maxListings, active);
 });
 
-// ✅ My Properties List (FIXED: createdBy)
+// ✅ My Properties List
 function loadMyProperties(uid, maxListings, planActive){
   if(!myProps) return;
 
@@ -197,16 +196,14 @@ function loadMyProperties(uid, maxListings, planActive){
       let remaining = maxListings - count;
       if(remaining < 0) remaining = 0;
 
-      const remainListingsEl = document.getElementById("remainListings");
       if(remainListingsEl) remainListingsEl.innerText = remaining.toString();
 
       // ✅ If limit over, block Add Property
-      const addBtn = document.getElementById("addBtn");
       if(addBtn && remaining <= 0){
         addBtn.style.pointerEvents = "none";
         addBtn.style.opacity = "0.5";
         addBtn.innerText = "Limit Reached";
-        const infoMsg = document.getElementById("infoMsg");
+
         if(infoMsg){
           infoMsg.innerHTML = `⚠️ आपकी listing limit खत्म हो गई है। अधिक listing के लिए <b>Upgrade Plan</b> करें।`;
         }
@@ -219,7 +216,7 @@ function loadMyProperties(uid, maxListings, planActive){
   });
 }
 
-// ✅ Auto Expire Approved Properties when plan expires (FIXED: createdBy)
+// ✅ Auto Expire Approved Properties when plan expires
 async function expireUserProperties(uid){
   try{
     const q = query(
@@ -245,4 +242,4 @@ async function expireUserProperties(uid){
   }catch(err){
     console.log("❌ Expire error:", err);
   }
-     }
+                                }
