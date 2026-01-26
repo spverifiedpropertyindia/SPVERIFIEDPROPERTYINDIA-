@@ -2,8 +2,7 @@ import { auth, db } from "./firebase.js";
 
 import {
   GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   onAuthStateChanged,
   signOut
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
@@ -14,45 +13,52 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-// ✅ Google Login (Redirect - Mobile best)
-export async function googleLogin(){
+// ✅ Google Login (POPUP - Best for Brave + Mobile)
+export async function googleLogin() {
   const provider = new GoogleAuthProvider();
-  await signInWithRedirect(auth, provider);
-}
 
-// ✅ Handle redirect result (after login)
-export async function handleRedirectLogin(){
-  try{
-    const result = await getRedirectResult(auth);
-    if(result && result.user){
+  // ✅ Force account chooser
+  provider.setCustomParameters({
+    prompt: "select_account"
+  });
 
-      // ✅ user firestore doc create/update
-      await setDoc(doc(db, "users", result.user.uid), {
-        uid: result.user.uid,
-        email: result.user.email || "",
-        name: result.user.displayName || "",
-        photo: result.user.photoURL || "",
+  const result = await signInWithPopup(auth, provider);
+
+  if (result && result.user) {
+    const u = result.user;
+
+    // ✅ user firestore doc create/update
+    await setDoc(
+      doc(db, "users", u.uid),
+      {
+        uid: u.uid,
+        email: u.email || "",
+        name: u.displayName || "",
+        photo: u.photoURL || "",
         kycStatus: "PENDING",
         planStatus: "INACTIVE",
         updatedAt: serverTimestamp()
-      }, { merge: true });
+      },
+      { merge: true }
+    );
 
-      return result.user;
-    }
-  }catch(err){
-    console.log("Redirect Login Error:", err);
+    return u;
   }
+
+  return null;
+}
+
+// ✅ अब redirect handler की जरूरत नहीं (लेकिन file में रहने दो)
+export async function handleRedirectLogin() {
   return null;
 }
 
 // ✅ Listen logged in user
-export function listenUser(cb){
-  return onAuthStateChanged(auth, (user) => {
-    cb(user);
-  });
+export function listenUser(cb) {
+  return onAuthStateChanged(auth, (user) => cb(user));
 }
 
 // ✅ Logout
-export async function logoutUser(){
+export async function logoutUser() {
   await signOut(auth);
 }
