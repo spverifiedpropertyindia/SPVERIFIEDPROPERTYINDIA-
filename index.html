@@ -1,73 +1,66 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SP Verified Property India</title>
-  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
 </head>
+
 <body>
 
-  <div class="nav">
-    <div class="logo">🏠 SP VERIFIED PROPERTY INDIA</div>
-    <div class="menu">
-      <a href="index.html">Home</a>
-      <a href="properties.html">Properties</a>
-      <a href="plans.html">Plans</a>
-      <a href="dashboard.html">Dashboard</a>
-      <a href="login.html" id="loginLink">Login</a>
-      <a href="admin.html" id="adminLink" style="display:none;">Admin</a>
-      <button class="btn2" id="logoutBtn" style="display:none;">Logout</button>
+<header class="navbar">
+  <div class="logo">SP Verified</div>
+  <nav>
+    <a href="#">Properties</a>
+    <a href="#">Plans</a>
+    <a href="#">Contact</a>
+    <button class="btn-primary">Login</button>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="hero-text">
+    <h1>India’s Most Trusted Verified Property Platform</h1>
+    <p>100% Legal Document Verified Listings. No Fraud. No Hidden Charges.</p>
+    <div class="hero-buttons">
+      <button class="btn-primary">Browse Properties</button>
+      <button class="btn-outline">List Property</button>
     </div>
   </div>
-
-  <div class="container">
-
-    <div class="hero">
-      <h1>Find Verified Properties in India ✅</h1>
-      <p>Only approved + live listings are shown publicly.</p>
-
-      <div class="searchBox">
-        <input class="input" id="city" placeholder="City (e.g. Raipur)"/>
-        <select class="input" id="type">
-          <option value="">All Types</option>
-          <option value="Plot">Plot</option>
-          <option value="House">House</option>
-          <option value="Flat">Flat</option>
-          <option value="Commercial">Commercial</option>
-          <option value="Rent">Rent</option>
-        </select>
-        <button class="btn" id="searchBtn">Search</button>
-      </div>
-    </div>
-
-    <!-- ✅ TRUST BANNER -->
-    <div class="box" style="margin-top:14px;">
-      <h2 style="font-size:18px;font-weight:1000;">✅ Verified Listings Only</h2>
-      <p class="small" style="margin-top:6px;">
-        🔒 Only <b>Admin Approved</b> + <b>LIVE</b> properties are visible publicly.<br/>
-        ✅ KYC Required • ✅ GPS Verified • ✅ Plan Based Listing • ✅ Secure Admin Approval
-      </p>
-    </div>
-
-    <h2 style="margin-top:18px;">🔥 Latest Approved Properties</h2>
-    <div class="grid" id="list"></div>
+  <div class="hero-image">
+    <img src="assets/images/hero-property.jpg" alt="Luxury Property">
   </div>
+</section>
 
-  <div class="footer">
-    ✅ WhatsApp Support:
-    <a href="https://wa.me/918305070599" target="_blank"><b>8305070599</b></a>
-    &nbsp; | &nbsp;
-    ✅ Support Email:
-    <a href="mailto:spverifiedproperty@gmail.com"><b>spverifiedproperty@gmail.com</b></a>
-    <div style="margin-top:10px;">
-      <a href="faq.html"><b>FAQ</b></a> |
-      <a href="contact.html"><b>Support</b></a> |
-      <a href="terms.html"><b>Terms</b></a> |
-      <a href="privacy.html"><b>Privacy</b></a>
-    </div>
+<section class="trust">
+  <div class="trust-card">✔ Legal Verified</div>
+  <div class="trust-card">✔ KYC Protected</div>
+  <div class="trust-card">✔ Secure Payments</div>
+  <div class="trust-card">✔ Fraud-Free Listings</div>
+</section>
+
+<section class="properties">
+  <h2>Featured Verified Properties</h2>
+  <div class="property-grid">
+    <!-- Dynamic Cards Here -->
   </div>
+</section>
 
-  <script type="module" src="js/app.js"></script>
+<section class="testimonials">
+  <h2>What Our Clients Say</h2>
+  <div class="testimonial-card">
+    <p>"Completely transparent process. Highly recommended."</p>
+    <span>- Amit Sharma, Delhi</span>
+  </div>
+</section>
+
+<footer>
+  <p>© 2026 SP Verified Property India</p>
+  <p>Privacy Policy | Terms & Conditions</p>
+</footer>
+
 </body>
-  </html>
+</html>
